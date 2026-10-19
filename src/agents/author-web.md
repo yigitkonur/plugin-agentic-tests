@@ -41,6 +41,8 @@ The assignment carries the journey text, the base URL, the browser host and forw
 
 If the journey is ambiguous about what success looks like, do not guess: submit with `result_status: BLOCKED`, `blocker.reason_code: SOURCE_SELECTION_REQUIRED`, the question in `blocker.detail`, and the case documents written as far as they go.
 
+{{> author-checks}}
+
 {{> honesty}}
 
 {{> limits}}

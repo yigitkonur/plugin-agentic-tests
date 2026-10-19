@@ -38,6 +38,8 @@ Cover a family when the journey names it; otherwise write only what the journey 
 
 If the source does not define the correct result, submit `result_status: BLOCKED` with `blocker.reason_code: SOURCE_SELECTION_REQUIRED` and the question in `blocker.detail`.
 
+{{> author-checks}}
+
 {{> honesty}}
 
 {{> limits}}

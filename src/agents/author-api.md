@@ -41,6 +41,8 @@ When the journey names a family, cover it as below; otherwise write only what th
 
 If the contract does not say what the correct response is, submit `result_status: BLOCKED` with `blocker.reason_code: SOURCE_SELECTION_REQUIRED` and the question in `blocker.detail`.
 
+{{> author-checks}}
+
 {{> honesty}}
 
 {{> limits}}

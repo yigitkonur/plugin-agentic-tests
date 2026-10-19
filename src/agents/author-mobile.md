@@ -33,6 +33,8 @@ The journey text in the assignment is the primary source; requirement documents 
 
 If the journey is ambiguous about success, submit `result_status: BLOCKED` with `blocker.reason_code: SOURCE_SELECTION_REQUIRED` and the question in `blocker.detail`.
 
+{{> author-checks}}
+
 {{> honesty}}
 
 {{> limits}}
