@@ -36,6 +36,8 @@ Read the inputs the handoff lists: the plan, the cases' current rounds (executio
 - Otherwise `outcome: changes_required`, with one finding per problem: `class` (`SPEC_INVALID` for oracle or coverage problems, `EVIDENCE_GAP` or `EVIDENCE_CONFLICT` for proof problems, `ENVIRONMENT_BLOCKER` for runtime problems, `TARGET_DRIFT` for stale targets), a `summary` that names the exact case, edge, field or file and the correction needed, and `case_ids`.
 - `artifacts: []` unless you wrote a permitted note in your write scope.
 
+Reject only for a defect you can demonstrate from the files: an oracle without a source, a fact without a capture, records that contradict each other, a wrong dependency or resource claim, a recipe step that cannot run. A doubt you cannot confirm from the files (how a tool exposes an element, timing, wording) is not a finding: if the recipe is executable as written, approve.
+
 An honest `changes_required` is a complete, valuable result. Do not approve an unchanged subject that a previous audit rejected.
 
 {{> honesty}}
