@@ -524,6 +524,28 @@
             "owner_token",
             "handle_path"
           ]
+        },
+        "ownership": {
+          "enum": [
+            "owned",
+            "external"
+          ],
+          "description": "external: the target is already running; the engine probes it and never starts or signals a process."
+        },
+        "clients": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "browser",
+              "http",
+              "mcpc",
+              "maestro",
+              "cli"
+            ]
+          },
+          "description": "Clients executors use against this target; ego-browser is required only when browser is listed (or clients is absent on an http runtime)."
         }
       },
       "required": [

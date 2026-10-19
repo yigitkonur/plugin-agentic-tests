@@ -10,11 +10,7 @@ allowed-tools: Bash, Read, Write, Agent, SendMessage, AskUserQuestion
 
 You are the campaign controller. Plugin agents do every substantive job: authoring cases, starting the runtime, planning, auditing, executing, verifying, diagnosing and fixing. You allocate their tasks with the controller script, launch the matching agent with its handoff path, bind the agent ID, and read its one-line result. Evidence, drafts and worker transcripts never enter your context; the engine's state is your only view.
 
-Controller (every command prints one JSON line):
-
-```bash
-AT="node ${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs"
-```
+Controller: `node "${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs" <command> …`, which prints one JSON line per command. Below it is written `$AT`; always type the full `node "…/at.mjs"` form, because shell state does not persist between calls and zsh does not split a variable into words.
 
 Arguments: `$ARGUMENTS`
 
@@ -24,7 +20,10 @@ Arguments: `$ARGUMENTS`
 2. Settings: read `<project>/.claude/agentic-tests.local.md` if it exists. Its frontmatter may set `domains`, `base_url`, `start_command`, `port`, `forward_ports`, `browser_host`, `accounts` (variable names only), `review`, `host_capacity`, `api_base_url`, `mcp_server`, `mobile_app_id`, `runner_host`. Arguments override settings.
 3. Domain from the target: `http(s)://…` is web (add api when settings list it or the user asks for API checks), `mcp:…` is mcp, `app:…` is mobile. Each domain needs its plugin; if the Agent tool does not list `agentic-tests-<domain>:executor-<domain>`, stop and tell the user to run `/plugin install agentic-tests-<domain>@agentic-tests`.
 4. Journeys: split the quoted text on `;` or new lines. With no journeys and no cases on disk, ask the user for them (AskUserQuestion, one question, two to four suggested journeys you inferred from the project's routes). With `--resume`, skip to section 5.
-5. Web runtime choice: if `start_command` or a `package.json` dev script exists and the target is local, the environment operator starts the app on an allow-listed port (3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000; prefer the target URL's port). `EGO_FORWARD_PORTS` is that one port. For a public URL, no forwarding.
+5. Web runtime choice. The remote browser reaches a local app only on these forwarded ports: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000.
+   - The target already answers (`curl -s -m 5 -o /dev/null -w '%{http_code}' <url>` returns a status): **Attach** to it. If it is local, its port must be on the list; `EGO_FORWARD_PORTS` is that port.
+   - Otherwise **Start**: the operator starts `start_command` (or the project's dev script) on an allow-listed port, preferring the target URL's port. `EGO_FORWARD_PORTS` is that port.
+   - A public URL is always Attach, with no forwarding.
 6. Review policy: `--review 1` or `--review 2` forces every expectation; otherwise authors apply the default (2 for critical, auth, payment and integrity; 1 otherwise).
 7. Track: `smoke` (default) reports failures; `campaign` also runs the repair loop of section 6. With `--detach`, go to section 8 instead.
 
@@ -52,11 +51,13 @@ Every task takes three steps, and the binding must happen in the same turn as th
 
 Launch independent tasks together: all `launch` calls, then all Agent calls in one message, then all `bind` calls. Keep active workers at or below the campaign's host capacity.
 
+When `launch` returns `ok: false` at the `task dispatch` step (`TASK_BLOCKED`, a resource lease or capacity), the task is allocated but waiting. Do not launch an agent for it. After the task holding that resource closes, run `$AT dispatch --campaign "<campaign>" --task-id <task_id>` and then launch and bind as usual.
+
 When a worker's completion notification arrives, read its one line, then:
 - Self-publishing roles (author, environment operator, planner, executor, diagnostician, ticket writer, implementer, integrator): `$AT close --campaign "<campaign>" --task-id <task_id>`.
 - Reviewers (verifier, plan auditor): `$AT publish --campaign "<campaign>" --task-id <task_id>`. If it returns `ok: false`, send the `issues` and `details` to that same agent with SendMessage and wait for its new line; never edit a draft yourself.
 - Always record cost from the notification's usage: `$AT cost --campaign "<campaign>" --task-id <task_id> --tokens <subagent_tokens> --model <model from the table>`.
-- A `BLOCKED` line: read the reason. Fix the input with a new task (corrected request) when you can; otherwise report it. A close or publish that fails because outputs are missing means the worker did not finish; ask it with SendMessage what is missing.
+- A `BLOCKED` or `PARTIAL` line: read the reason. Fix the input with a new task of the same role whose request adds `replaces_task_id: <that task>` (the engine then retires the old task's obligation); otherwise report it. A close or publish that fails because outputs are missing means the worker did not finish; ask it with SendMessage what is missing.
 
 | Role | web | api | mcp | mobile | model |
 |---|---|---|---|---|---|
@@ -92,8 +93,8 @@ required_inputs:
 ```yaml
 role: environment-operator
 requested_action: |
-  Domain: <domain>. Start: <command, or "discover from the project">. Port: <port>.
-  Readiness path: <path, default />. Browser host: <host>. EGO_FORWARD_PORTS: <ports>.
+  Domain: <domain>. Mode: <Attach <url> | Start <command, or "discover from the project"> on port <port>>.
+  Readiness path: <path, default />. Browser host: <host>. EGO_FORWARD_PORTS: <ports>. Clients: <browser, plus http when API cases run>.
 required_inputs:
   - {base: project, path: .}
 ```
@@ -119,7 +120,13 @@ required_inputs:
 $AT plan accept --campaign "<campaign>" --file "<planner outputs[0]>" --audit "<auditor outputs[0]>"
 ```
 
-When the audit says `changes_required` (plan accept fails), launch a new planner whose `requested_action` lists the audit findings, then a new auditor. After two rejected audits, stop and report the findings.
+When the audit says `changes_required` (`plan accept` fails with `PLAN_NOT_APPROVED`), read only the audit's findings (`grep -A12 '^findings' "<auditor outputs[0]>"`) and route each one by what it names:
+
+- **A case's spec** (`SPEC_INVALID` with case IDs): one revision author per case, `role: scenario-author`, `case_ids: [<case_id>]`, `requested_action` quoting that case's findings. The engine allocates the next spec revision (S002 …) and keeps the old one as history.
+- **The runtime** (`ENVIRONMENT_BLOCKER` about the target, such as undeclared account variables): `$AT runtime recover --campaign "<campaign>" --target-id <target> --file <request>` with a request file holding `reason:` and `requested_action:` that quote the finding. It returns an environment-operator task and a successor target; dispatch it with `$AT dispatch`, launch the operator, bind, and plan against the successor target.
+- **The plan itself** (coverage, dependencies, resource claims): the next planner fixes it.
+
+Then launch a new planner whose `requested_action` lists every finding and the new spec revisions or target, then a new auditor. After two rejected audits, stop and report the findings.
 
 **Wave 4: executors**, one per case, at most two web executors at a time (they share the browser host):
 
@@ -140,7 +147,12 @@ verification_slot: <a|b>
 requested_action: Review the saved evidence of <case_id> round <round_id> against its frozen expectations.
 ```
 
-**Wave 6: closure.** When `$AT state --campaign "<campaign>"` shows every case with an outcome, launch `role: plan-auditor`, `plan_id: <plan_id>`, `phase: closure`, `requested_action: Audit current-target proof and open obligations at closure.` Publish it.
+**Wave 6: closure.** When `$AT state --campaign "<campaign>"` shows every case with an outcome, launch `role: plan-auditor`, `plan_id: <plan_id>`, `phase: closure`, `requested_action: Audit current-target proof and open obligations at closure.` Publish it, then check `$AT state` for `complete: true`.
+
+When closure is rejected, read its findings (`grep -A12 '^findings' "<auditor outputs[0]>"`) and route them, then audit closure again (at most twice):
+- **Side findings with pending scope**: ask the user once with AskUserQuestion (in scope, out of scope), record each answer with `$AT finding decide … --source "user, <date>"`. When you cannot ask (no user), leave them pending and report them.
+- **Evidence problems on a case** (missing, duplicated or contradictory captures): a fresh executor for that case, with `prior_context: {what_changed: "<the capture fix>", hypothesis: "<why the new capture proves it>", do_not_repeat: ["<the faulty capture>"]}`, then fresh verifiers for the new round.
+- **Obligations of superseded tasks**: allocate their replacement with `replaces_task_id`, or interrupt an unused task with `$AT task interrupt --campaign … --task-id … --reason "<why>" --finished true`.
 
 ## 5. Read the state
 
@@ -167,7 +179,17 @@ Your final message: one table with case, journey, outcome and evidence folder; t
 
 ## 8. Detached run
 
-With `--detach`, launch `agentic-tests:orchestrator` once with the prompt `Run: <arguments without --detach>` plus the project root and settings path, tell the user the run continues in the background and that its questions will arrive as messages, and end your turn. When its notification arrives, relay its report.
+With `--detach`, launch `agentic-tests:orchestrator` once with this prompt, then tell the user the run continues in the background and that its questions will arrive as messages, and end your turn:
+
+```text
+Run: <arguments without --detach>
+Project: <project root>
+Settings: <settings file path, or none>
+Plugin root: ${CLAUDE_PLUGIN_ROOT}
+Run skill: ${CLAUDE_PLUGIN_ROOT}/skills/run/SKILL.md
+```
+
+When a question from it arrives, answer it (ask the user when you cannot) with SendMessage. When its completion notification arrives, relay its report.
 
 ## Rules
 

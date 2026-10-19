@@ -6,6 +6,7 @@
 //   at.mjs doctor
 //   at.mjs init     --project P --slug S [--mode interactive|autonomous] [--host-capacity N] [--max-attempts N]
 //   at.mjs launch   --campaign C [--request FILE]       (request YAML on stdin when --request is absent)
+//   at.mjs dispatch --campaign C --task-id J                (retry a task launch allocated but could not dispatch)
 //   at.mjs bind     --campaign C --task-id J --handle H
 //   at.mjs publish  --campaign C --task-id J [--file DRAFT]   (reviewers: check, submit, close)
 //   at.mjs close    --campaign C --task-id J
@@ -92,6 +93,13 @@ if (command === 'doctor') {
     drafts: created.data.draft_paths.map(p => abs(campaign, p)),
     outputs: created.data.outputs.map(o => abs(campaign, o.path)),
   });
+} else if (command === 'dispatch') {
+  // Dispatch a task that launch allocated but could not dispatch yet (resource lease, capacity).
+  const campaign = need(options, 'campaign'), taskId = need(options, 'task-id');
+  const dispatched = run(['task', 'dispatch', '--campaign', campaign, '--task-id', taskId]);
+  if (dispatched.status !== 0) failWith(`task dispatch ${taskId} (task stays PLANNED)`, dispatched);
+  const task = dispatched.data.task;
+  print({ ok: true, task_id: task.task_id, role: task.role, case_ids: task.case_ids, ...(task.round_id ? { round_id: task.round_id } : {}), handoff: abs(campaign, `tasks/${task.task_id}/10-handoff.md`), drafts: task.draft_paths.map(p => abs(campaign, p)), outputs: task.outputs.map(o => abs(campaign, o.path)) });
 } else if (command === 'bind') {
   const result = run(['task', 'bind', '--campaign', need(options, 'campaign'), '--task-id', need(options, 'task-id'), '--handle', need(options, 'handle')]);
   if (result.status !== 0) failWith('task bind', result);
@@ -130,7 +138,7 @@ if (command === 'doctor') {
     obligations: (s.obligations || []).map(o => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null))),
     tokens: costs.length ? { total: costs.reduce((n, c) => n + c.tokens, 0), by_role: costs.reduce((m, c) => ({ ...m, [c.role]: (m[c.role] || 0) + c.tokens }), {}) } : undefined,
   });
-} else if (command === 'report') {
+} else if (command === 'report' && !(rest[0] && !rest[0].startsWith('--'))) {
   const campaign = need(options, 'campaign');
   run(['reconcile', '--campaign', campaign]);
   const built = run(['report', 'build', '--campaign', campaign]);
@@ -145,7 +153,7 @@ if (command === 'doctor') {
   appendFileSync(path.join(campaign, 'costs.jsonl'), JSON.stringify(entry) + '\n');
   print({ ok: true, ...entry });
 } else if (!command || command === 'help' || command === '--help') {
-  print({ ok: true, commands: ['doctor', 'init', 'launch', 'bind', 'publish', 'close', 'state', 'report', 'cost', '<engine passthrough>'], engine });
+  print({ ok: true, commands: ['doctor', 'init', 'launch', 'dispatch', 'bind', 'publish', 'close', 'state', 'report', 'cost', '<engine passthrough>'], engine });
 } else {
   const result = spawnSync(process.execPath, [engine, command, ...rest], { stdio: 'inherit', env });
   process.exit(result.status ?? 6);

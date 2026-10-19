@@ -1,0 +1,8 @@
+{
+  "server": "fixture-shop-mcp",
+  "tools": {
+    "list_orders": { "required": [], "properties": ["limit"] },
+    "create_order": { "required": ["item", "qty"], "properties": ["idempotency_key", "item", "qty"] },
+    "shop_status": { "required": [], "properties": [] }
+  }
+}

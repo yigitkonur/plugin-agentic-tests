@@ -1,4 +1,4 @@
-import { mkdir, readFile, realpath } from 'node:fs/promises';
+import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createConnection } from 'node:net';
 import { readYaml, readCampaign, readRecords, writeRecord, withController, containedPath } from './store.mjs';
@@ -42,6 +42,9 @@ function validateDraft(draft) {
   }
   if (draft.readiness.timeout_ms !== undefined) required(Number.isInteger(draft.readiness.timeout_ms) &&
     draft.readiness.timeout_ms >= 100 && draft.readiness.timeout_ms <= 300000, 'timeout_ms must be 100..300000.');
+  if (draft.ownership === 'external') {
+    required(draft.readiness.type === 'http' && !draft.session, 'An external target needs HTTP readiness and no tool session.');
+  }
   if (draft.command.env_names) required(Array.isArray(draft.command.env_names) &&
     draft.command.env_names.every(name => /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)), 'Invalid env_names.');
 }
@@ -79,6 +82,23 @@ async function probe(record, campaign, handle) {
     await pause(50);
   }
   throw new Error(`Readiness timed out: ${detail}`);
+}
+
+// An external target is already running (a dev server the user started, a staging URL).
+// The engine only probes it: no process is started, owned or signalled.
+async function probeExternal(record) {
+  const deadline = Date.now() + (record.readiness.timeout_ms || 10000);
+  let detail = 'No response yet.';
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(record.readiness.url, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
+      const body = await response.text();
+      if (response.status === record.readiness.expected_status && body.includes(record.readiness.body_contains)) return { alive: true, ownership: 'EXTERNAL' };
+      detail = `Readiness mismatch: status ${response.status}; declared body marker ${body.includes(record.readiness.body_contains) ? 'present' : 'absent'}.`;
+    } catch (error) { detail = `Request failed: ${error.cause?.code || error.name}.`; }
+    await pause(500);
+  }
+  throw new Error(`External target is not ready: ${detail}`);
 }
 
 async function assertPortAvailable(readiness) {
@@ -141,6 +161,10 @@ async function assertStartIdentity(campaign, environment) {
 
 async function inspectEnvironment(campaign, environment) {
   if (environment.session) return inspectToolSession(campaign, environment);
+  if (environment.ownership === 'external') {
+    try { return await probeExternal({ ...environment, readiness: { ...environment.readiness, timeout_ms: 5000 } }); }
+    catch (error) { return { alive: false, ownership: 'EXTERNAL', detail: error.message }; }
+  }
   let handle;
   const expectedPath = `environments/${environment.target_id}/process.runtime.json`;
   if (environment.process?.handle_path !== expectedPath) return { alive: false, ownership: 'MISSING_HANDLE' };
@@ -174,7 +198,7 @@ export async function run(command, options = {}) {
       }
       draft.record_id = output.record_id;
     }
-    await assertPortAvailable(draft.readiness);
+    if (draft.ownership !== 'external') await assertPortAvailable(draft.readiness);
     draft.source = await attestSource(campaign, draft);
     const base = `environments/${draft.target_id}`;
     const recordPath = `${base}/00-environment.record.yaml`;
@@ -204,7 +228,13 @@ export async function run(command, options = {}) {
     let handle;
     try {
       let readinessState;
-      if (record.session) {
+      if (record.ownership === 'external') {
+        await writeFile(containedPath(campaign, logs.stdout), '');
+        await writeFile(containedPath(campaign, logs.stderr), '');
+        record.capability_notes = [...(record.capability_notes || []), 'External target: probed at start, never started, owned or stopped by the engine. Source identity is the local checkout, not proof of what the server runs.'];
+        await withController(campaign, () => writeRecord(campaign, recordPath, record, { immutable: false }));
+        readinessState = await probeExternal(record);
+      } else if (record.session) {
         const attached = await startToolSession(campaign, record);
         await withController(campaign, () => writeRecord(campaign, recordPath, record, { immutable: false }));
         readinessState = await probeToolSession(campaign, record, attached.handle, attached.deadline);
@@ -247,6 +277,11 @@ export async function run(command, options = {}) {
       const found = await findEnvironment(campaign, options['target-id']);
       const environment = found.record;
       await assertNoExecutorLease(campaign, environment);
+      if (environment.ownership === 'external') {
+        environment.status = 'STOPPED';
+        await writeRecord(campaign, found.path, environment, { immutable: false });
+        return { environment, record_path: found.path, alive: null, ownership: 'EXTERNAL', note: 'External target released; nothing was signalled.' };
+      }
       const state = await inspectEnvironment(campaign, environment);
       if (!['OWNED', 'EXITED'].includes(state.ownership)) {
         throw new CliError(environment.session ? 'SESSION_OWNERSHIP_MISMATCH' : 'PROCESS_OWNERSHIP_MISMATCH',

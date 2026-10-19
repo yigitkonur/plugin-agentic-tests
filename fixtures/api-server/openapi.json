@@ -1,0 +1,56 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Fixture Shop API", "version": "1.0.0", "description": "Contract for the agentic-tests API fixture." },
+  "paths": {
+    "/api/login": {
+      "post": {
+        "summary": "Exchange credentials for a bearer token.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } } },
+        "responses": {
+          "200": { "description": "Token issued.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Token" } } } },
+          "400": { "description": "A field is missing or invalid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Invalid email or password (code invalid_credentials).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "summary": "List the caller's orders, paginated.",
+        "security": [{ "bearer": [] }],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0, "default": 0 } }
+        ],
+        "responses": {
+          "200": { "description": "A page of orders.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderPage" } } } },
+          "400": { "description": "limit or offset out of range.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Missing, invalid (code unauthorized) or expired (code token_expired) token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "post": {
+        "summary": "Create an order. Repeating a request with the same Idempotency-Key and body returns the original order (200, header Idempotent-Replayed: true) instead of creating a second one; the same key with a different body is a 409.",
+        "security": [{ "bearer": [] }],
+        "parameters": [ { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string" } } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderRequest" } } } },
+        "responses": {
+          "201": { "description": "Order created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
+          "200": { "description": "Idempotent replay of an earlier order.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
+          "400": { "description": "item or qty invalid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Missing, invalid or expired token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Idempotency-Key reused with a different body (code idempotency_conflict).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "bearer": { "type": "http", "scheme": "bearer" } },
+    "schemas": {
+      "LoginRequest": { "type": "object", "required": ["email", "password"], "properties": { "email": { "type": "string" }, "password": { "type": "string" }, "ttl_seconds": { "type": "integer", "minimum": 1, "maximum": 3600 } } },
+      "Token": { "type": "object", "required": ["token", "expires_in"], "additionalProperties": false, "properties": { "token": { "type": "string" }, "expires_in": { "type": "integer" } } },
+      "OrderRequest": { "type": "object", "required": ["item", "qty"], "properties": { "item": { "enum": ["Notebook", "Pen", "Stapler", "Ruler"] }, "qty": { "type": "integer", "minimum": 1, "maximum": 99 } } },
+      "Order": { "type": "object", "required": ["id", "item", "qty", "total"], "additionalProperties": false, "properties": { "id": { "type": "string" }, "item": { "type": "string" }, "qty": { "type": "integer" }, "total": { "type": "number" } } },
+      "OrderPage": { "type": "object", "required": ["items", "total", "limit", "offset"], "additionalProperties": false, "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } }, "total": { "type": "integer" }, "limit": { "type": "integer" }, "offset": { "type": "integer" } } },
+      "Error": { "type": "object", "required": ["error"], "additionalProperties": false, "properties": { "error": { "type": "object", "required": ["code", "message"], "additionalProperties": false, "properties": { "code": { "type": "string" }, "message": { "type": "string" }, "field": { "type": "string" } } } } }
+    }
+  }
+}

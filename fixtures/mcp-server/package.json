@@ -1,0 +1,1 @@
+{ "name": "agentic-tests-fixture-mcp", "version": "1.0.0", "private": true, "type": "module", "bin": { "fixture-shop-mcp": "server.mjs" } }

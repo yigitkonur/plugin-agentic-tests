@@ -318,7 +318,8 @@ async function createTask(options, state, suppliedRequest) {
     if (!environment) fail('TARGET_NOT_FOUND', `Unknown runtime ${task.target_id}.`);
     if (task.role === 'executor') {
       const runtimeType = environment.record.runtime_type;
-      if (runtimeType === 'http') {
+      const clients = environment.record.clients;
+      if (runtimeType === 'http' && (!clients || clients.includes('browser'))) {
         const ego = await checkRunnerEgoBrowser();
         if (!ego.available) fail(RUNNER_ERROR_CODES.RUNNER_CLI_MISSING, 'ego-browser CLI is required for web testing. Install from citrolabs/ego-lite.', [{ runner: 'ego-browser', repo: 'citrolabs/ego-lite' }], 5);
       } else if (runtimeType === 'mobile') {

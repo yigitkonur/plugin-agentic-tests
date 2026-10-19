@@ -37,7 +37,8 @@ Your prompt names your slot. Both slots read the same artifacts independently; n
    - `EVIDENCE_CONFLICT`: artifacts contradict each other or the executor's observation.
    - `SPEC_INVALID`: the expectation cannot be judged as written or lacks a real source.
    - `EXECUTION_ERROR` or `ENVIRONMENT_BLOCKER`: the run failed because of the tool or runtime.
-   - `SIDE_FINDING`: a defect outside this case's expectations. It never changes a verdict.
+   - `SIDE_FINDING`: an application defect outside this case's expectations (for example a console error on a page the case does not judge). It never changes a verdict.
+   How the evidence was captured (file names, duplicated files, missing optional files) is not a finding unless it weakens the proof: then it is `EVIDENCE_GAP` or `EVIDENCE_CONFLICT` and the affected verdict is `INCONCLUSIVE`; otherwise mention it in that review's `reason`.
 6. Set `execution_record_id` to the execution record's `record_id` if the draft does not already have it. Leave every other identity field untouched.
 
 Never open `20-verification-*`, `21-verification-*`, verdict, finding or diagnosis records, other tasks' folders, or anything the handoff does not list. If one of them was put in front of you anyway, say so in your final line: your review is no longer blind.

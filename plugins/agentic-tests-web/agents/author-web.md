@@ -40,7 +40,7 @@ The assignment carries the journey text, the base URL, the browser host and forw
    - `priority`: P0 when failure blocks the product's core use (sign-in, checkout, saving work), P1 for main journeys, P2 secondary, P3 cosmetic. `critical` and `subjective` booleans.
    - `review_count`: follow the assignment's review policy. Without one, use 2 for critical, authentication, payment and data-integrity expectations and 1 otherwise.
    - `observable.description`: what the verifier should see.
-   - `evidence_requirements`: `{id: ER01, type: image, capture: …}` for the screenshot proving it, plus `{type: text, …}` for the snapshot excerpt when text matters. Every expectation needs at least one image requirement.
+   - `evidence_requirements`: IDs are unique within the case: number them ER01, ER02 … across all expectations, never restarting per expectation. `{id: ER01, type: image, capture: …}` for the screenshot proving it, plus `{type: text, …}` for the snapshot excerpt when text matters. Every expectation needs at least one image requirement. The final-state expectation also gets `{type: json, capture: "console.json: uncaught errors, console.error messages and failed requests collected during the case"}`; it is evidence, not an extra pass condition, unless the assignment asks for the console-clean set.
    - When the assignment asks for them, add: console clean (no uncaught errors or `console.error` during the journey, source `general_invariant`, evidence `json` from `console.json`), basic accessibility (buttons and links have names, inputs have labels, one `h1`, from the snapshot), and responsive (screenshots at 1440 and 390 pixels wide).
 6. Check before submitting: the Markdown and the manifest list the same expectation IDs; every statement traces to the journey or a cited line; no statement claims more than its source; a stranger could run `03-how-to-run.md` without guessing.
 7. Submit.
@@ -53,6 +53,7 @@ If the journey is ambiguous about what success looks like, do not guess: submit 
 - Never invent a file, URL, commit, ID, hash, timestamp or outcome. When something is unavailable, use the supported shape: executors use `PARTIAL` or `NOT_RUN` with per-requirement `gaps`, verifiers use `INCONCLUSIVE` or `NOT_ASSESSED`, other roles use `result_status: BLOCKED` with a `blocker` (`reason_code` + `detail`) and a `summary`.
 - `blocker.reason_code` values: MISSING_CREDENTIAL, TOOL_UNAVAILABLE, AGENT_ISOLATION_UNAVAILABLE, DISK_FULL, RUNTIME_START_FAILED, TRANSPORT_UNREACHABLE, TUNNEL_PROTOCOL_UNSUPPORTED, SOURCE_SELECTION_REQUIRED, GITHUB_UNAVAILABLE, MISSING_ARTIFACT, EVIDENCE_CHANGED, WRONG_TARGET, NOT_EXECUTED, ATTEMPT_LIMIT.
 - Keep secrets out of everything you write. Name variables instead of copying values, replace tokens, cookies and passwords in captured output with `[REDACTED]`, and say what you redacted.
+- In YAML, double-quote every free-text value (`statement`, `observed`, `reason`, `summary`, `detail`, `observation`). Unquoted, a ` #` starts a comment and silently cuts the text ("Orders #1001" becomes "Orders").
 - Edit the generated draft in place. Keep every identity field exactly as generated: `record_id`, `task_id`, `actor_id`, `case_id`, `spec_revision`, `round_id`, `target_id`, `created_at`, digests.
 
 ## Limits
