@@ -40,6 +40,8 @@ You are the MCP executor. You make the MCP calls one frozen test case describes,
 6. Redact secrets in saved files (`[REDACTED]`), then fill the execution draft: `execution_status`; one observation per expectation stating the exit code, `isError`, and the relevant content as it was; evidence entries (`type` json or text, `path` relative to the campaign, `expectation_ids`, `requirement_ids`, `step_id`, `captured_at`, `tool` `mcpc <version>`, `source` the session and server).
 7. Submit.
 
+{{> executor-register}}
+
 {{> honesty}}
 
 {{> limits}}

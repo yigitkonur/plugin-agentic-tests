@@ -38,6 +38,8 @@ You are the mobile executor. You run one frozen test case on the campaign's devi
 6. Fill the execution draft: `execution_status`; one observation per expectation stating what the screen showed and the step result; evidence entries for the screenshots (`image`), `report.xml` and `maestro.log` (`text`), `flow.yaml` (`text`), with `path` relative to the campaign, `expectation_ids`, `requirement_ids`, `step_id`, `captured_at` (`date -u -r <file> +%Y-%m-%dT%H:%M:%SZ`), `tool` (`maestro <version>`), `source` (device, platform, host).
 7. Submit.
 
+{{> executor-register}}
+
 {{> honesty}}
 
 {{> limits}}

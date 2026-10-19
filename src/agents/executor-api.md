@@ -39,6 +39,8 @@ You are the API executor. You send the requests one frozen test case describes, 
    - `evidence`: one entry per file (`type` json or text), with `path` relative to the campaign, `expectation_ids`, `requirement_ids`, `step_id`, `captured_at`, `tool` (`curl <version>`), `source` (method and URL).
 10. Submit.
 
+{{> executor-register}}
+
 {{> honesty}}
 
 {{> limits}}

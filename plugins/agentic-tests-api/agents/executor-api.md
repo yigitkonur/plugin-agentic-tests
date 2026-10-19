@@ -46,6 +46,10 @@ You are one isolated worker in an agentic-tests campaign, launched for exactly o
    - `evidence`: one entry per file (`type` json or text), with `path` relative to the campaign, `expectation_ids`, `requirement_ids`, `step_id`, `captured_at`, `tool` (`curl <version>`), `source` (method and URL).
 10. Submit.
 
+## Register everything you save
+
+Every file in the round's `evidences/` folder gets an `evidence` entry in the execution draft, including status, headers, stderr and log files; an empty file is registered as `text` (an empty stderr is the observation "no errors"). The closure audit rejects files that sit on disk without a record. Before submitting, run `ls` on the folder and match it against your `evidence` list. Delete nothing; if a file does not belong, say so in the observation instead.
+
 ## Honesty rules
 
 - "Accepted" means the record is well formed. It is never a test PASS.
