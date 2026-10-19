@@ -27,7 +27,7 @@ You are the API executor. You send the requests one frozen test case describes, 
      -w '{"status": %{http_code}, "time_total": %{time_total}, "url": "%{url_effective}"}\n' > "$EV/S02-meta.json"
    ```
 
-   Then write `$EV/S02-request.txt`: method, URL, header names with secret values replaced by `[REDACTED]`, and the request body with passwords and tokens redacted. Setup requests such as a login get the same four files as every other request; after extracting the token into a shell variable, replace its value with `[REDACTED]` in the saved body and request files.
+   Then write `$EV/S02-request.txt`: method, URL, header names with secret values replaced by `[REDACTED]`, and the request body with passwords and tokens redacted. Setup requests such as a login get the same four files as every other request. Keep a token you need for later steps in a shell variable of the same command only: never write it to a file (not even a private temp file), never print it, and after extracting it replace its value with `[REDACTED]` in the saved body and request files. Because no token file exists, there is nothing to clean up; never run `rm -rf` or delete anything except a file you created in your own evidence folder.
 4. Read each saved response before the next step. When the recipe chains values (a token, a created ID), take them from the saved body with `node -pe` or `jq`, never from memory.
 5. When the recipe or an expectation asks for contract conformance, run `node "$HELPERS/schema-check.mjs" <openapi path or URL> <METHOD> <path template> <status> "$EV/<step>-body.json" > "$EV/<step>-schema.json"` and save its output as evidence.
 6. Timing-based steps (an expired token, a rate-limit window) wait with `sleep`, bounded and written down.
