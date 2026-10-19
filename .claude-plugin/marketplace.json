@@ -1,0 +1,15 @@
+{
+  "name": "agentic-tests",
+  "owner": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
+  "metadata": {
+    "description": "Agentic E2E testing for Claude Code: one core plugin with the engine and orchestration, plus domain plugins for web, HTTP APIs, MCP servers and mobile. Install the core and the domains a project needs.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    { "name": "agentic-tests", "source": "./plugins/agentic-tests", "description": "Core: engine, /agentic-tests:run and /agentic-tests:setup, planner, auditor, verifier and repair agents.", "version": "0.1.0", "category": "testing" },
+    { "name": "agentic-tests-web", "source": "./plugins/agentic-tests-web", "description": "Web domain: ego-browser author, environment operator and executor.", "version": "0.1.0", "category": "testing", "dependencies": ["agentic-tests"] },
+    { "name": "agentic-tests-api", "source": "./plugins/agentic-tests-api", "description": "HTTP API domain: curl and OpenAPI author, environment operator and executor.", "version": "0.1.0", "category": "testing", "dependencies": ["agentic-tests"] },
+    { "name": "agentic-tests-mcp", "source": "./plugins/agentic-tests-mcp", "description": "MCP domain: mcpc 0.7 author, environment operator and executor.", "version": "0.1.0", "category": "testing", "dependencies": ["agentic-tests"] },
+    { "name": "agentic-tests-mobile", "source": "./plugins/agentic-tests-mobile", "description": "Mobile domain: Maestro author, environment operator and executor, plus the web executor.", "version": "0.1.0", "category": "testing", "dependencies": ["agentic-tests"] }
+  ]
+}

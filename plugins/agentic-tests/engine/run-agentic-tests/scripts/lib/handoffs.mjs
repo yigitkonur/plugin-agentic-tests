@@ -15,7 +15,7 @@ export function renderHandoff(task, { campaign = '', project = '', profile = han
     `# ${task.task_id}: ${task.role}`, '',
     `Actor: ${task.actor_id}. Use a fresh, real isolated host context; never reuse another task's handle.`,
     'Do not spawn workers. Read only your bounded inputs. Save evidence; submit a structured result. Accepted is not PASS.', '',
-    ...(reviewer ? [] : [`CLI: ${cli}`]), `Campaign: ${campaign}`, `Project: ${project}`, '',
+    ...(reviewer ? [] : [`CLI: ${cli}`]), `Campaign: ${campaign}`, `Project: ${project}`, ...(process.env.AGENTIC_HELPERS_DIR ? [`Helpers: ${process.env.AGENTIC_HELPERS_DIR}`] : []), '',
     ...(embedded
       ? ['## Task record', `- ${absolute(`tasks/${task.task_id}/00-task.record.yaml`)}`, '']
       : ['## Read first', `- ${path.join(packageRoot, 'references/roles', task.role + '.md')}`, `- ${path.join(packageRoot, 'references/records-and-states.md')}`, `- ${path.join(packageRoot, 'references/cli-and-yq.md')}`, `- ${absolute(`tasks/${task.task_id}/00-task.record.yaml`)}`, '']),

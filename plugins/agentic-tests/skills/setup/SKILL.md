@@ -1,0 +1,69 @@
+---
+name: setup
+description: Prepare a project for agentic-tests once - detect its domains, runtime and runners, and write .claude/agentic-tests.local.md for /agentic-tests:run.
+argument-hint: '[--domains web,api,mcp,mobile] [--accounts VAR1,VAR2] [--start "<command>"] [--port N] [--yes]'
+disable-model-invocation: true
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
+---
+
+# Set up agentic-tests for this project
+
+Write `<project>/.claude/agentic-tests.local.md`, the settings `/agentic-tests:run` reads. Detect everything you can; ask only what the project cannot tell you. Arguments: `$ARGUMENTS`. With `--yes`, ask nothing and use detected values and arguments.
+
+```bash
+AT="node ${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs"
+```
+
+## 1. Detect
+
+1. Project root: `git rev-parse --show-toplevel` (else the current directory). GitHub remote: `git remote get-url origin` (the repair loop needs one; note when absent).
+2. Runners: `$AT doctor`. Keep `web.available`, `web.remote_host`, `mcp.available`, `mobile.available`, `mobile.java_home`, `mobile.xcode`.
+3. Domains, from the project files (read `package.json`, top-level files and folders; do not read the whole tree):
+   - **web**: a frontend framework or dev server (`next`, `vite`, `react-scripts`, `astro`, `@remix-run`, `nuxt`, `svelte`, an `index.html`, server-rendered pages).
+   - **api**: HTTP routes (`express`, `fastify`, `hono`, `koa`, `@nestjs`, route folders like `app/api`, `routes/`), an OpenAPI file (`openapi.*`, `swagger.*`), or a backend such as Supabase (`@supabase/supabase-js`, `supabase/` folder).
+   - **mcp**: `@modelcontextprotocol/sdk`, `mcp-use`, `fastmcp`, or a `mcp.json`/`.mcp.json` describing the server.
+   - **mobile**: `app.json` with `expo`, `react-native`, `ios/` or `android/` folders, `.maestro/` flows.
+4. Web runtime: the dev script from `package.json` (`dev`, then `start`) and its port (`--port`, `PORT`, framework default: Next 3000, Vite 5173, Astro 4321). The port must be one the browser host forwards: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000. If the default is not on that list, pick 3000 and note the flag that sets it.
+5. Accounts: variable names the app reads for test users (`.env.example`, `.env.local.example`, README). Never read or copy values from `.env` files.
+6. Mobile only: run `"${CLAUDE_PLUGIN_ROOT}/scripts/select-mac.sh"` and keep its chosen host, platform list and device; read the app ID from `app.json`, `ios/*.xcodeproj` or `android/app/build.gradle`.
+7. Effort overrides: if `CLAUDE_CODE_EFFORT_LEVEL` or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is set in the environment, note that it overrides the agents' pinned effort or model.
+
+## 2. Confirm
+
+Unless `--yes`, ask one AskUserQuestion with up to three questions: which domains to test (multi-select, detected ones marked recommended), which account variable names to use (offer the detected names), and for mobile which platform (iOS, Android or both). Arguments already given are not asked again.
+
+## 3. Write the settings file
+
+Create `.claude/` if needed and write `.claude/agentic-tests.local.md`:
+
+```markdown
+---
+domains: [web, api]
+base_url: http://127.0.0.1:3000
+start_command: npm run dev -- --port 3000
+port: 3000
+forward_ports: "3000"
+browser_host: tugce
+accounts: [FIXTURE_USER, FIXTURE_PASSWORD]
+review: default
+host_capacity: 4
+api_base_url: http://127.0.0.1:3000/api
+openapi: openapi.json
+mcp_server: null
+backend_api: null
+mobile_app_id: null
+mobile_platforms: []
+runner_host: local
+github_remote: origin
+---
+
+Notes for authors: product documents worth citing (README sections, specs), how test data is reset, anything a tester must know.
+```
+
+Use `null` or `[]` for anything not detected. Fill the notes from what you read: real file paths of requirement documents and the reset procedure if the project has one.
+
+Then make sure the project's `.gitignore` contains `.claude/*.local.md` and `/agentic-tests/` (append the missing lines; never rewrite the file).
+
+## 4. Report
+
+One short message: the settings path, the detected domains with the evidence for each, the runner status per domain, the plugins to install (`/plugin install agentic-tests-<domain>@agentic-tests`, enabled for this project only with `--scope project`), anything missing (runner, GitHub remote, accounts), and the next command, for example `/agentic-tests:run http://127.0.0.1:3000 "sign in; see orders"`.
