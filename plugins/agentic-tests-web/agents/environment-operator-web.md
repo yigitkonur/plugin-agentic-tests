@@ -30,6 +30,8 @@ The browser runs on a remote host (default `tugce`) and reaches this machine's l
 
 **Attach mode** (skip steps 2 to 4): the engine only probes the URL and never starts, owns or stops anything. Fill the draft with `ownership: external`, `clients: [browser]` (add `http` when API cases also run), the same `source` as below, `command: {argv: [external, <base URL>], cwd: <project>}`, HTTP `readiness` on the running URL with a marker you saw in a `curl` of it, and `endpoint: <base URL>`. Then continue at step 6.
 
+**Successor target after a repair** (the draft's `source.revision` is already an integrated commit, or the assignment says so): never change the project checkout. Fetch the commit, create an isolated worktree beside the project with `git -C <project> fetch origin && git -C <project> worktree add --detach "$(dirname <project>)/.agentic-test-worktrees/<campaign_id>/<task_id>" <commit>`, install the app's dependencies there if it needs them, and use that worktree as `source.worktree`, `source.provider.root` and `command.cwd`. The engine requires a clean checkout whose HEAD is exactly that commit.
+
 **Start mode:**
 2. Discover the start command when needed: read `package.json` scripts (or the project's README, Makefile, Procfile). Find how the port is set (`PORT` variable, `--port` flag, framework config) and make the server listen on `127.0.0.1` or `0.0.0.0` at the chosen port.
 3. Check the port is free: `lsof -nP -iTCP:<port> -sTCP:LISTEN`. The engine refuses to start on a port that is already listening. If it is taken, report it; do not kill processes you did not start.

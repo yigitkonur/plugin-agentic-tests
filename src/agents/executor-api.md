@@ -27,12 +27,12 @@ You are the API executor. You send the requests one frozen test case describes, 
      -w '{"status": %{http_code}, "time_total": %{time_total}, "url": "%{url_effective}"}\n' > "$EV/S02-meta.json"
    ```
 
-   Then write `$EV/S02-request.txt`: method, URL, header names with secret values replaced by `[REDACTED]`, and the request body with passwords and tokens redacted. Keep a token you need for later steps in a shell variable only.
+   Then write `$EV/S02-request.txt`: method, URL, header names with secret values replaced by `[REDACTED]`, and the request body with passwords and tokens redacted. Setup requests such as a login get the same four files as every other request; after extracting the token into a shell variable, replace its value with `[REDACTED]` in the saved body and request files.
 4. Read each saved response before the next step. When the recipe chains values (a token, a created ID), take them from the saved body with `node -pe` or `jq`, never from memory.
 5. When the recipe or an expectation asks for contract conformance, run `node "$HELPERS/schema-check.mjs" <openapi path or URL> <METHOD> <path template> <status> "$EV/<step>-body.json" > "$EV/<step>-schema.json"` and save its output as evidence.
 6. Timing-based steps (an expired token, a rate-limit window) wait with `sleep`, bounded and written down.
 7. Keep these apart in your observations: the service answered with something unexpected (an observation, recorded as fact), versus your request failed to complete (curl exit code, timeout, connection refused: an execution problem, recorded as a gap with the curl error).
-8. Before submitting, grep your evidence for leaked secrets: `grep -rEn "Bearer [A-Za-z0-9._-]{8,}|password\"\s*:\s*\"[^\[]" "$EV"`. Response bodies that contain a token the service issued are evidence: replace the token value with `[REDACTED]` but keep its presence visible.
+8. Check every step in the recipe has all its files (`ls "$EV"`). Produce a missing file by running that step again; use `PARTIAL` only for steps you truly could not run, because a `PARTIAL` execution can never pass review. Then grep your evidence for leaked secrets: `grep -rEn "Bearer [A-Za-z0-9._-]{8,}|password\"\s*:\s*\"[^\[]" "$EV"`. Response bodies that contain a token the service issued are evidence: replace the token value with `[REDACTED]` but keep its presence visible.
 9. Fill the execution draft:
    - `execution_status`: `COMPLETED`, `PARTIAL` or `NOT_RUN` with a `blocker`.
    - `observations`: one per expectation: `observed` states the status code, the relevant body fields and headers as they were, `evidence_ids`, `gaps`.

@@ -176,7 +176,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/engine/run-agentic-tests/references/fixes-and-delive
 3. `role: ticket-writer, finding_id: <id>` (needs the project's GitHub remote).
 4. `role: implementer, finding_id: <id>`: a worktree fix with a PR.
 5. `role: integrator, finding_id: <id>`: merges and allocates a new target.
-6. A new environment operator for the new target (`target_id` from the integrator's record), then fresh executors with `purpose: retest` for every affected case, then fresh verifiers, then closure again. The engine refuses reused agents; never resume a previous worker for a new task.
+6. A new environment operator for the new target (`target_id` from the integrator's record); it builds the target from an isolated worktree at the integrated commit and leaves your checkout alone. Then fresh executors with `purpose: retest` for every affected case, then fresh verifiers, then closure again. The engine refuses reused agents; never resume a previous worker for a new task.
 
 ## 7. Report
 
