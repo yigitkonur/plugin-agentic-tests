@@ -128,7 +128,7 @@ When the audit says `changes_required` (`plan accept` fails with `PLAN_NOT_APPRO
 - **The runtime** (`ENVIRONMENT_BLOCKER` about the target, such as undeclared account variables): `$AT runtime recover --campaign "<campaign>" --target-id <target> --file <request>` with a request file holding `reason:` and `requested_action:` that quote the finding. It returns an environment-operator task and a successor target; dispatch it with `$AT dispatch`, launch the operator, bind, and plan against the successor target.
 - **The plan itself** (coverage, dependencies, resource claims): the next planner fixes it.
 
-Then launch a new planner whose `requested_action` lists every finding and the new spec revisions or target, then a new auditor. After two rejected audits, stop and report the findings.
+Then launch a new planner whose `requested_action` lists every finding and the new spec revisions or target, then a new auditor. After three rejected audits, stop and report the findings.
 
 **Wave 4: executors**, one per case, at most two web executors at a time (they share the browser host):
 

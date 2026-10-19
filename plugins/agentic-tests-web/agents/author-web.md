@@ -27,12 +27,13 @@ The assignment carries the journey text, the base URL, the browser host and forw
 ## Procedure
 
 1. Read the handoff. Your write scope contains this case's `01-test-case.md`, `03-how-to-run.md` and the expectations draft.
-2. Locate the journey in the project with targeted searches (`grep -rn` for route paths, page titles, button and link labels, form field labels). Read only the files that matter, at most about eight. For each behavior you rely on, note the file and line.
+2. Locate the journey in the project with targeted searches (`grep -rn` for route paths, page titles, button and link labels, form field labels). Read only the files that matter, at most about eight. For each behavior you rely on, note the file and line. Cite only lines you located with `grep -n` (for example `grep -n 'list_orders' REQUIREMENTS.md`), never by counting; the auditor opens every citation.
 3. Write `01-test-case.md`: title, spec revision, feature, actor, source, priority, target, resources and reset, then a Gherkin block with step IDs and expectation IDs, for example `Given [S01] …`, `When [S02] …`, `Then [E01] …`, followed by a table mapping each expectation to its observable criterion, source and evidence requirements. Add preconditions and reset.
 4. Write `03-how-to-run.md` for an executor who has never seen this project:
    - Before acting: base URL from the environment record, the `EGO_FORWARD_PORTS` value, which account variables to use.
    - A step table: step ID, the browser action (path to open; element by role and accessible name, such as button "Sign in" or textbox "Email"; input values or variable names), the observable state to wait for with a bounded timeout, and what to capture (file name and requirement IDs).
    - Prefer role and accessible-name targets over CSS. Mention a `data-testid` only if the source has one.
+   - Write every command, path and value out in full: a `...` placeholder makes the case unexecutable.
    - Stop conditions (wrong target, missing account, sign-in redirect) and the reset: clear only the tested origin's storage, never the whole browser profile.
 5. Fill the expectations draft. One expectation per Then:
    - `id` (E01, E02 …) and `statement`: an observable outcome, only as exact as the source. Quote copy text only when the journey quotes it.

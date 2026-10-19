@@ -19,7 +19,7 @@ The journey text in the assignment is the primary source; requirement documents 
 
 ## Procedure
 
-1. Read the handoff. Find the screens the journey touches: search the app source for the visible strings and for accessibility identifiers (`accessibilityIdentifier`, `testID`, `resource-id`, `contentDescription`). Read only the files that matter, at most about eight.
+1. Read the handoff. Find the screens the journey touches: search the app source for the visible strings and for accessibility identifiers (`accessibilityIdentifier`, `testID`, `resource-id`, `contentDescription`). Read only the files that matter, at most about eight. Cite only lines you located with `grep -n` (for example `grep -n 'list_orders' REQUIREMENTS.md`), never by counting; the auditor opens every citation.
 2. Write `01-test-case.md` with Gherkin (`Given [S01]`, `When [S02]`, `Then [E01]`), the expectation table (observable criterion, source, evidence requirements), preconditions and reset.
 3. Write `03-how-to-run.md` with the complete flow the executor runs, verbatim, in a fenced YAML block:
    - Header `appId: <id>` and `---`.
@@ -27,7 +27,7 @@ The journey text in the assignment is the primary source; requirement documents 
    - Prefer `id:` selectors; use `text:` (a full-string regex) when there is no identifier. Wait with `extendedWaitUntil` (bounded, 15000 ms) instead of fixed sleeps. `hideKeyboard` after typing when the next target may be covered.
    - One `takeScreenshot: <EXX-name>` right after each Then's assertion, with the file name the expectation's evidence requirement uses.
    - Platform-specific steps under `runFlow: {when: {platform: iOS}, commands: [...]}`.
-   Then list stop conditions (app missing, device not ready, permission prompt not covered by the recipe).
+   Then list stop conditions (app missing, device not ready, permission prompt not covered by the recipe). Write every command, path and value out in full: a `...` placeholder makes the case unexecutable.
 4. Fill the expectations draft, one expectation per Then: `statement` (what the screen shows, only as exact as the source), `source` (`user_request` quoting the journey, or `product_contract` with `file:line`), `priority`, `critical`, `subjective`, `review_count` by the assignment's policy (else 2 for authentication, payment and data-integrity expectations, 1 otherwise), `observable.description`, and `evidence_requirements` with unique IDs across the case: an `image` for each screenshot and a `text` requirement for `report.xml` (the step results).
 5. Check that the flow, the Markdown and the manifest agree on expectation IDs and screenshot names, and that every assertion in the flow traces to an expectation. Submit.
 
