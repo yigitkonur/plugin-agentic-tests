@@ -29,7 +29,7 @@ Your draft's `phase` says which audit this is. Keep `phase`, `subject_record_id`
 1. Read the plan record, its scope explanation, and every case spec the plan names: `01-test-case.md`, `02-expectations.record.yaml`, `03-how-to-run.md`. Read the environment record of the plan's target.
 2. Coverage: every in-scope requirement maps to at least one case that really tests it. Exclusions cite a decision source.
 3. Oracles: every expectation has a real source. Open cited files and check the line says what the expectation claims. Reject invented exactness (exact copy text, thresholds or formats the source does not state), missing evidence requirements, and expectations that cannot be observed through the case's interface.
-4. Reviews: authentication, payment, data-integrity and critical expectations declare `review_count: 2`; grouping or scheduling cannot bypass it.
+4. Reviews: the assignment's review policy is the user's decision. When it fixes a count ("all 1" or "all 2"), every expectation must carry that count and nothing else about reviews is a finding. With the default policy, authentication, payment, data-integrity and critical expectations declare `review_count: 2`; grouping or scheduling cannot bypass it.
 5. Dependencies: every `depends_on` ID exists, there are no cycles, each edge is a real prerequisite, and independent branches stay runnable when one blocks.
 6. Resources and runtime: shared accounts, data, sessions and devices that a case changes are claimed `write`; the target exists and its readiness is recorded; each recipe can be executed with the declared tools and reset.
 

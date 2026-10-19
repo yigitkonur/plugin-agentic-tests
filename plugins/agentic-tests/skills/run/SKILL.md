@@ -110,13 +110,14 @@ role: planner
 target_id: <target_id>
 requested_action: |
   Plan cases <T0001, T0002, …> on target <target_id>. Scope: 1) "<journey 1>" -> T0001; 2) …
+  Review policy: <default|all 1|all 2>.
 required_inputs:
   - <each case's specs/S001/01-test-case.md>
   - <each case's specs/S001/02-expectations.record.yaml>
   - environments/<target_id>/00-environment.record.yaml
 ```
 
-**Wave 3: plan audit**, `role: plan-auditor`, `plan_id: <plan_id from the planner launch>`, `requested_action: Audit plan <plan_id> for coverage, oracles, reviews, dependencies and resources before execution.` Publish it, then:
+**Wave 3: plan audit**, `role: plan-auditor`, `plan_id: <plan_id from the planner launch>`, `requested_action: Audit plan <plan_id> for coverage, oracles, reviews, dependencies and resources before execution. Review policy: <default|all 1|all 2>.` Publish it, then:
 
 ```bash
 $AT plan accept --campaign "<campaign>" --file "<planner outputs[0]>" --audit "<auditor outputs[0]>"
