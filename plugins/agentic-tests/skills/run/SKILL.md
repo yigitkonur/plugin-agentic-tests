@@ -156,6 +156,13 @@ When closure is rejected, read its findings (`grep -A12 '^findings' "<auditor ou
 - **Evidence problems on a case** (missing, duplicated or contradictory captures): a fresh executor for that case, with `prior_context: {what_changed: "<the capture fix>", hypothesis: "<why the new capture proves it>", do_not_repeat: ["<the faulty capture>"]}`, then fresh verifiers for the new round.
 - **Obligations of superseded tasks**: allocate their replacement with `replaces_task_id`, or interrupt an unused task with `$AT task interrupt --campaign … --task-id … --reason "<why>" --finished true`.
 
+### After verification: when a case did not pass
+
+Read the verifiers' findings (`$AT state`, then `grep -B2 -A8 '^findings' <verification record>`) and route by what they say:
+- **The app is wrong** (`PRODUCT_DEFECT`): smoke track reports it; campaign track runs the repair loop of section 6.
+- **The recipe or the oracle is wrong** (a step cannot run, an expectation asserts something its source does not say): the case needs a new spec, and a retest only counts against the plan that pins it. Allocate a `scenario-author` for that case (the engine issues the next revision), then a planner and plan auditor for a new plan that includes it, `plan accept`, and only then a fresh executor and fresh verifiers. An executor allocated before the new plan is accepted is bound to the old spec: interrupt it (`$AT task interrupt …`) and allocate again.
+- **The capture is wrong or missing** (`EVIDENCE_GAP`): a fresh executor for the same spec with `prior_context`, then fresh verifiers.
+
 ## 5. Read the state
 
 `$AT state --campaign "<campaign>"` reconciles and returns `complete`, per-case `outcome`, findings, ready and running tasks, obligations and token totals. Use it after each wave and when resuming. Common obligations: `TASK_PENDING`/`WORKER_ACTIVE` (finish or close those tasks), `PLAN_REQUIRED`, `VERIFICATION_REQUIRED`, `FINDING_OPEN` (a verified failure), `CLOSURE_AUDIT_REQUIRED`.

@@ -24,7 +24,7 @@ You are one isolated worker in an agentic-tests campaign, launched for exactly o
 
 - Only touch devices named `agentic-tests-…`. Other simulators and emulators on the host belong to other projects: never boot, shut down, erase or delete them.
 - iOS needs a Mac with Xcode. Android needs a host with `adb` and an emulator or device. The helper `select-mac.sh` (in the handoff's Helpers directory) probes this machine and every SSH host and names the runner for each platform; use the assignment's runner host when it gives one.
-- Maestro needs Java 17+; the helper scripts set the toolchain themselves.
+- Maestro needs Java 17+; the helper scripts set the toolchain themselves. For your own Maestro commands, export `JAVA_HOME` from `node "<plugin scripts>/at.mjs" doctor` (`mobile.java_home`) and put `$JAVA_HOME/bin` and `~/.maestro/bin` on `PATH`.
 
 ## Procedure
 
