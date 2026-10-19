@@ -6,7 +6,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtemp, symlink, rm } from 'node:fs/promises';
 
-const cli = fileURLToPath(new URL('../../skills/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
+const cli = fileURLToPath(new URL('../../plugins/agentic-tests/engine/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
 function invoke(...args) {
   const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
   return { ...result, data: result.stdout.trim() ? JSON.parse(result.stdout) : null };

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-const adapter = fileURLToPath(new URL('../../skills/run-agentic-tests/assets/examples/mcpc-session.mjs', import.meta.url));
+const adapter = fileURLToPath(new URL('../../plugins/agentic-tests/engine/run-agentic-tests/assets/examples/mcpc-session.mjs', import.meta.url));
 
 async function fixture(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'mcpc adapter space-'));
@@ -22,7 +22,7 @@ const args=process.argv.slice(2).filter(x=>x!=='--json');
 fs.appendFileSync(path.join(dir,'calls.jsonl'),JSON.stringify(args)+'\\n');
 let sessions=fs.existsSync(file)?Object.values(JSON.parse(fs.readFileSync(file,'utf8')).sessions):[];
 const save=()=>fs.writeFileSync(file,JSON.stringify({sessions:Object.fromEntries(sessions.map(s=>[s.name,s]))}));
-if(args[0]==='--version') console.log('0.6.0');
+if(args[0]==='--version') console.log('0.7.0');
 else if(!args.length) console.log(JSON.stringify({sessions,profiles:[]}));
 else if(args[0]==='connect') {
   sessions.push({name:args[2],pid:Number(process.env.MCPC_FIXTURE_PID),createdAt:'2026-09-28T00:00:00Z',status:'live',server:{command:'fixture'}});

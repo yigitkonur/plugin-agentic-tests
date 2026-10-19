@@ -7,12 +7,12 @@ import { createServer } from 'node:net';
 import { createServer as httpServer } from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { run as runtime } from '../../skills/run-agentic-tests/scripts/lib/runtime.mjs';
-import { run as report } from '../../skills/run-agentic-tests/scripts/lib/report.mjs';
-import { loadDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
-import { writeRecord, readCampaign, readYaml, stableStringify } from '../../skills/run-agentic-tests/scripts/lib/store.mjs';
-import { assessCampaign, run as workflow } from '../../skills/run-agentic-tests/scripts/lib/workflow.mjs';
-import { attestSource } from '../../skills/run-agentic-tests/scripts/lib/source.mjs';
+import { run as runtime } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/runtime.mjs';
+import { run as report } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/report.mjs';
+import { loadDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
+import { writeRecord, readCampaign, readYaml, stableStringify } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/store.mjs';
+import { assessCampaign, run as workflow } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/workflow.mjs';
+import { attestSource } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/source.mjs';
 
 await loadDependencies({ setup: true });
 

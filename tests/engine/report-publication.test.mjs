@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { loadDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
-import { run as workflow } from '../../skills/run-agentic-tests/scripts/lib/workflow.mjs';
-import { run as runtime } from '../../skills/run-agentic-tests/scripts/lib/runtime.mjs';
-import { run as report } from '../../skills/run-agentic-tests/scripts/lib/report.mjs';
+import { loadDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
+import { run as workflow } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/workflow.mjs';
+import { run as runtime } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/runtime.mjs';
+import { run as report } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/report.mjs';
 
 const { YAML } = await loadDependencies({ setup: true });
 const sha = value => createHash('sha256').update(value).digest('hex');

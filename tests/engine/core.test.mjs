@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readYaml, readRecords, writeRecord, containedPath, withController } from '../../skills/run-agentic-tests/scripts/lib/store.mjs';
-import { loadDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
-import { attestSource } from '../../skills/run-agentic-tests/scripts/lib/source.mjs';
-import { run, assessCampaign } from '../../skills/run-agentic-tests/scripts/lib/workflow.mjs';
+import { readYaml, readRecords, writeRecord, containedPath, withController } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/store.mjs';
+import { loadDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
+import { attestSource } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/source.mjs';
+import { run, assessCampaign } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/workflow.mjs';
 
 const temporary = async t => {
   const dir = await mkdtemp(path.join(tmpdir(), 'agentic-core-'));
@@ -44,7 +44,7 @@ async function campaign(t, options = {}) {
   await writeFile(path.join(project, 'fixture-source.mjs'), 'export const cats = true;\n');
   await promisify(execFile)('git', ['-C', project, 'add', 'fixture-source.mjs']);
   await promisify(execFile)('git', ['-C', project, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture baseline']);
-  const result = await run('init', { project, slug: 'real-check', 'host-capacity': '3', ...options });
+  const result = await run('init', { project, slug: 'real-check', 'host-capacity': '3', 'max-attempts': '5', ...options });
   return { project, campaign: result.campaign_path, config: result.campaign };
 }
 
@@ -445,7 +445,7 @@ test('scenario recovery preserves allocated revisions and accepts Todo domains w
 
 test('doctor setup repairs only its incomplete external lock cache and leaves neighboring files intact', async t => {
   const cacheRoot = await temporary(t);
-  const module = new URL('../../skills/run-agentic-tests/scripts/lib/dependencies.mjs', import.meta.url).href;
+  const module = new URL('../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs', import.meta.url).href;
   await writeFile(path.join(cacheRoot, 'keep.txt'), 'unrelated cache data');
   const script = `import {dependencyLocation,loadDependencies} from ${JSON.stringify(module)}; import {mkdir,writeFile} from 'node:fs/promises'; import path from 'node:path'; const cache=dependencyLocation(); await mkdir(cache,{recursive:true}); await writeFile(path.join(cache,'incomplete.txt'),'interrupted install'); const loaded=await loadDependencies({setup:true}); console.log(loaded.YAML.parse('answer: 42').answer);`;
   const result = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, AGENTIC_TESTS_CACHE: cacheRoot }, timeout: 30000 });

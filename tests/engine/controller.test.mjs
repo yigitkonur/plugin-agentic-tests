@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { loadDependencies, getDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
-const cli = fileURLToPath(new URL('../../skills/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
+import { loadDependencies, getDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
+const cli = fileURLToPath(new URL('../../plugins/agentic-tests/engine/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
 await loadDependencies({ setup: true });
 function call(command, args = {}, expected = 0) {
   const argv = command.split(' ').concat(Object.entries(args).flatMap(([k, v]) => [`--${k}`, String(v)]));
@@ -21,7 +21,7 @@ async function setup(t) {
   await writeFile(path.join(project, '.gitignore'), 'agentic-tests/\n');
   for (const args of [['init', '-q'], ['config', 'user.name', 'Fixture'], ['config', 'user.email', 'fixture@example.invalid'], ['add', '.'], ['commit', '-qm', 'fixture']]) assert.equal(spawnSync('git', args, { cwd: project }).status, 0);
   assert.equal(spawnSync('git', ['remote', 'add', 'origin', 'git@github.com:example/project.git'], { cwd: project }).status, 0);
-  const init = call('init', { project, slug: 'public', 'host-capacity': 8 });
+  const init = call('init', { project, slug: 'public', 'host-capacity': 8, 'max-attempts': 5 });
   let seq = 0;
   const c = { project, campaign: init.campaign_path, config: init.campaign };
   c.json = async obj => { const f = path.join(c.campaign, `request-${++seq}.json`); await writeFile(f, JSON.stringify(obj)); return f; };

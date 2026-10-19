@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { loadDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
+import { loadDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
 
 await loadDependencies({ setup: true });
-const cli = fileURLToPath(new URL('../../skills/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
+const cli = fileURLToPath(new URL('../../plugins/agentic-tests/engine/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
 const invoke = (...args) => {
   const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', timeout: 15000 });
   return { status: result.status, data: result.stdout.trim() ? JSON.parse(result.stdout) : null, stderr: result.stderr };

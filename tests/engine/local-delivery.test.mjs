@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { loadDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
+import { loadDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
 
-const cli = fileURLToPath(new URL('../../skills/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
+const cli = fileURLToPath(new URL('../../plugins/agentic-tests/engine/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
 const { YAML } = await loadDependencies({ setup: true });
 const repository = 'fixture/tested-product';
 const product = variant => `const name=process.argv[2];
@@ -57,7 +57,7 @@ else throw Error('unexpected hosted command');fs.writeFileSync(file,JSON.stringi
     const args = command.split(' ').concat(Object.entries(options).flatMap(([key, value]) => [`--${key}`, String(value)]));
     return JSON.parse(processResult(process.execPath, [cli, ...args], project, process.env, expected).stdout);
   };
-  const initialized = call('init', { project, slug: 'real-repair', 'host-capacity': 4 });
+  const initialized = call('init', { project, slug: 'real-repair', 'host-capacity': 4, 'max-attempts': 5 });
   const campaign = initialized.campaign_path;
   const invoke = (command, options = {}, expected = 0) => call(command, { campaign, ...options }, expected);
   const targets = [];

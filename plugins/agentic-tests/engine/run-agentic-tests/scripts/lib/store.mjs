@@ -119,12 +119,31 @@ export async function writeRecord(campaign, relativePath, record, { immutable = 
   return record;
 }
 
+const lockWaitMs = () => Number(process.env.AGENTIC_LOCK_WAIT_MS ?? 30000);
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+function ownerAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return true;
+  try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; }
+}
+
+// Concurrent workers submit at the same moment; wait for the lock instead of failing.
+// A lock held by this same process is a re-entrant call and fails immediately.
+// A lock whose recorded owner process is gone is stale and is reclaimed.
 export async function withController(campaign, operation) {
   const lockPath = containedPath(campaign, '.controller.lock');
+  const busy = () => new CliError('CONTROLLER_BUSY', 'Another controller holds the campaign lock. Inspect .controller.lock; remove only after confirming the owner process has stopped.', 4);
+  const deadline = Date.now() + lockWaitMs();
   let lock;
-  try { lock = await open(lockPath, 'wx', 0o600); } catch (error) {
-    if (error.code === 'EEXIST') throw new CliError('CONTROLLER_BUSY', 'Another controller holds the campaign lock. Inspect .controller.lock; remove only after confirming the owner process has stopped.', 4);
-    throw error;
+  for (;;) {
+    try { lock = await open(lockPath, 'wx', 0o600); break; } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      let owner = null;
+      try { owner = JSON.parse(await readFile(lockPath, 'utf8')); } catch {}
+      if (owner?.pid === process.pid) throw busy();
+      if (owner && !ownerAlive(owner.pid)) { await rm(lockPath, { force: true }); continue; }
+      if (Date.now() >= deadline) throw busy();
+      await sleep(50 + Math.floor(Math.random() * 200));
+    }
   }
   try {
     await lock.writeFile(JSON.stringify({ pid: process.pid, created_at: new Date().toISOString() }));

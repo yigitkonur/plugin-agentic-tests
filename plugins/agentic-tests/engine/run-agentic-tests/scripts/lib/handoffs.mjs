@@ -2,7 +2,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const packageRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const shellQuote = value => "'" + String(value).replaceAll("'", "'\"'\"'") + "'";
-export function renderHandoff(task, { campaign = '', project = '' } = {}) {
+// Profile 'embedded': the worker's role rules live in its agent definition, so the
+// packet skips the protocol reading list; reviewers return a draft path instead of submitting.
+export const handoffProfile = () => process.env.AGENTIC_HANDOFF_PROFILE === 'embedded' ? 'embedded' : 'standard';
+export function renderHandoff(task, { campaign = '', project = '', profile = handoffProfile() } = {}) {
+  const embedded = profile === 'embedded';
+  const reviewer = embedded && ['verifier', 'plan-auditor'].includes(task.role);
   const cli = path.join(packageRoot, 'scripts/agentic-tests.mjs');
   const command = name => `node ${shellQuote(cli)} ${name} --campaign ${shellQuote(campaign)}`;
   const absolute = relative => path.join(campaign, relative);
@@ -10,8 +15,10 @@ export function renderHandoff(task, { campaign = '', project = '' } = {}) {
     `# ${task.task_id}: ${task.role}`, '',
     `Actor: ${task.actor_id}. Use a fresh, real isolated host context; never reuse another task's handle.`,
     'Do not spawn workers. Read only your bounded inputs. Save evidence; submit a structured result. Accepted is not PASS.', '',
-    `CLI: ${cli}`, `Campaign: ${campaign}`, `Project: ${project}`, '',
-    '## Read first', `- ${path.join(packageRoot, 'references/roles', task.role + '.md')}`, `- ${path.join(packageRoot, 'references/records-and-states.md')}`, `- ${path.join(packageRoot, 'references/cli-and-yq.md')}`, `- ${absolute(`tasks/${task.task_id}/00-task.record.yaml`)}`, '',
+    ...(reviewer ? [] : [`CLI: ${cli}`]), `Campaign: ${campaign}`, `Project: ${project}`, '',
+    ...(embedded
+      ? ['## Task record', `- ${absolute(`tasks/${task.task_id}/00-task.record.yaml`)}`, '']
+      : ['## Read first', `- ${path.join(packageRoot, 'references/roles', task.role + '.md')}`, `- ${path.join(packageRoot, 'references/records-and-states.md')}`, `- ${path.join(packageRoot, 'references/cli-and-yq.md')}`, `- ${absolute(`tasks/${task.task_id}/00-task.record.yaml`)}`, '']),
     '## Assignment', task.requested_action, '',
     `Cases: ${task.case_ids.join(', ') || '(campaign-level)'}`,
     ...(task.related_case_ids ? [`All cases affected by this finding: ${task.related_case_ids.join(', ')}. Preserve every case in integration and retest obligations.`] : []),
@@ -23,7 +30,8 @@ export function renderHandoff(task, { campaign = '', project = '' } = {}) {
   if (task.worktree_path) lines.push('', '## Assigned implementation worktree', `Base revision: ${task.worktree_base}. The controller allocated this path; it has not created the worktree.`, `git -C ${shellQuote(project)} worktree add -b ${shellQuote(`agentic-${task.campaign_id}-${task.task_id}`)} ${shellQuote(task.worktree_path)} ${shellQuote(task.worktree_base)}`, 'Write developer check logs under the assigned artifact directory. Fill the preassigned check entry with the real command and observed exit code.');
   if (task.github_repository) lines.push('', '## Tested-project GitHub delivery', `Repository: ${task.github_repository.repository}. Project remote: ${task.github_repository.remote}.`, `Every GitHub operation must include --repo ${shellQuote(task.github_repository.repository)}.`, `gh issue list --repo ${shellQuote(task.github_repository.repository)} --search ${shellQuote('agentic-tests:' + task.campaign_id + ':' + task.finding_id)}`, 'Use the tested project and isolated implementation worktree for Git operations. Preserve related issue and PR history; do not close issues before independent retest.');
   if (task.group && task.role !== 'verifier') lines.push('', '## Grouped execution', `Shared setup: ${task.group.shared_setup}`, `Reset between cases: ${task.group.reset}`, 'Submit each assigned output separately; each case keeps independent evidence and verdict.');
-  lines.push('', '## Exact completion commands', ...task.draft_paths.flatMap(p => task.role === 'environment-operator' ? [`${command('runtime start')} --file ${shellQuote(absolute(p))}`] : [`${command('submit')} --task-id ${shellQuote(task.task_id)} --file ${shellQuote(absolute(p))} --check`, `${command('submit')} --task-id ${shellQuote(task.task_id)} --file ${shellQuote(absolute(p))}`]));
+  if (reviewer) lines.push('', '## Completion', ...task.draft_paths.map(p => `- Edit the draft in place: ${absolute(p)}`), 'Do not run the CLI. The controller validates and publishes your draft and messages you with exact validator errors if it is rejected; fix only the named fields.', `Final message, one line: DRAFT ${task.draft_paths.map(p => absolute(p)).join(' ')}`);
+  else lines.push('', '## Exact completion commands', ...task.draft_paths.flatMap(p => task.role === 'environment-operator' ? [`${command('runtime start')} --file ${shellQuote(absolute(p))}`] : [`${command('submit')} --task-id ${shellQuote(task.task_id)} --file ${shellQuote(absolute(p))} --check`, `${command('submit')} --task-id ${shellQuote(task.task_id)} --file ${shellQuote(absolute(p))}`]));
   if (task.role === 'executor') lines.push('Run the actual E2E scenario. Cover every expectation with saved evidence or an explicit gap. Never submit a final PASS.');
   if (task.role === 'verifier') lines.push('Open saved artifacts and compare each expectation. Do not rerun the test. Do not read other verification records or verdicts; this review is blind. Missing evidence needs a fresh executor.');
   if (task.role === 'scenario-author') lines.push('Write Given/When/Then with expectation IDs into 01-test-case.md and concrete steps into 03-how-to-run.md beside the assigned expectations output. Expected behavior needs an explicit source.');
@@ -33,7 +41,7 @@ export function renderHandoff(task, { campaign = '', project = '' } = {}) {
   }
   if (task.role === 'environment-operator') {
     lines.push('', `Runtime start owns logs at ${absolute(`environments/${task.target_id}/logs/stdout.log`)} and ${absolute(`environments/${task.target_id}/logs/stderr.log`)}; inspect these after the command. Do not create the runtime generation directory yourself.`, 'Run runtime start with the assigned environment draft. Preserve its record_id, task_id, actor_id, and target_id. Runtime publication writes the canonical environment result. Return its path and READY or FAILED status to the controller; the controller closes the task after confirmed worker termination.');
-  } else {
+  } else if (!reviewer) {
     lines.push('', 'Run submit --check first if useful, then submit. Finish the assigned work after receipt.worker_may_finish is true; the controller records confirmed worker termination separately. Accepted means a valid report, not a passing test.');
   }
   const unavailable = task.role === 'environment-operator'

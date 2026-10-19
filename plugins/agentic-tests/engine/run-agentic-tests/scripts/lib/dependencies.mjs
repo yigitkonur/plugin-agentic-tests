@@ -69,121 +69,123 @@ export async function loadDependencies(options = {}) {
   } finally { await rm(staging, { recursive: true, force: true }); }
 }
 
-export async function checkRunnerEgoBrowser() {
-  const skillPaths = [
-    path.join(homedir(), '.agents', 'skills', 'ego-browser', 'SKILL.md'),
-    path.join(root, '..', 'ego-browser', 'SKILL.md'),
-    path.join(root, 'skills', 'ego-browser', 'SKILL.md'),
+// Locate sibling runner skills wherever the host installs them.
+export function findSkill(name) {
+  const extra = (process.env.AGENTIC_SKILL_DIRS || '').split(path.delimiter).filter(Boolean);
+  const candidates = [
+    ...extra.map(dir => path.join(dir, name, 'SKILL.md')),
+    path.join(homedir(), '.claude', 'skills', name, 'SKILL.md'),
+    path.join(homedir(), '.agents', 'skills', name, 'SKILL.md'),
+    path.join(root, '..', name, 'SKILL.md'),
+    path.join(root, 'skills', name, 'SKILL.md'),
   ];
-  const skillAvailable = skillPaths.some(p => existsSync(p));
+  return candidates.find(candidate => existsSync(candidate)) || null;
+}
 
+// Agent and MCP shells skip profile files, so also look in the runners' own install dirs.
+function findExecutable(name, extraDirs = []) {
+  const dirs = [...(process.env.PATH || '').split(path.delimiter), ...extraDirs].filter(Boolean);
+  for (const dir of dirs) {
+    const candidate = path.join(dir, name);
+    try { if (existsSync(candidate) && !lstatSync(candidate).isDirectory()) return candidate; } catch {}
+  }
+  return null;
+}
+
+async function javaVersionAt(home) {
   try {
-    const { stdout, stderr } = await execute('ego-browser', ['--version'], { timeout: 3000 });
+    const { stdout, stderr } = await execute(path.join(home, 'bin', 'java'), ['-version'], { timeout: 5000 });
+    const output = `${stdout}\n${stderr}`;
+    const match = output.match(/version\s+"([\d._]+)"/i);
+    return match ? match[1] : null;
+  } catch { return null; }
+}
+
+// A Java 17+ home: JAVA_HOME, macOS java_home, then Homebrew JDKs.
+export async function findJavaHome() {
+  const candidates = [];
+  if (process.env.JAVA_HOME) candidates.push(process.env.JAVA_HOME);
+  if (process.platform === 'darwin') {
+    try { candidates.push((await execute('/usr/libexec/java_home', ['-v', '17+'], { timeout: 5000 })).stdout.trim()); } catch {}
+    for (const formula of ['openjdk@21', 'openjdk@17', 'openjdk', 'openjdk@27', 'openjdk@25'])
+      for (const prefix of ['/opt/homebrew/opt', '/usr/local/opt'])
+        candidates.push(path.join(prefix, formula, 'libexec', 'openjdk.jdk', 'Contents', 'Home'));
+  }
+  for (const home of candidates.filter(Boolean)) {
+    if (!existsSync(path.join(home, 'bin', 'java'))) continue;
+    const version = await javaVersionAt(home);
+    if (version && Number(version.split('.')[0]) >= 17) return { home, version };
+  }
+  return null;
+}
+
+export async function checkRunnerEgoBrowser() {
+  const skillPath = findSkill('ego-browser');
+  const cliPath = findExecutable('ego-browser', [path.join(homedir(), '.local', 'bin')]);
+  try {
+    const { stdout, stderr } = await execute(cliPath || 'ego-browser', ['--version'], { timeout: 15000 });
     const output = `${stdout}\n${stderr}`;
     const versionMatch = output.match(/ego-browser\s+([\d.]+)/i);
+    let remoteHost = null;
+    try { remoteHost = readFileSync(cliPath, 'utf8').match(/^target=([\w.-]+)/m)?.[1] || null; } catch {}
     return {
       available: true,
       cli_available: true,
-      skill_available: skillAvailable,
+      cli_path: cliPath,
+      skill_available: Boolean(skillPath),
+      skill_path: skillPath,
       version: versionMatch ? versionMatch[1] : output.trim().split('\n')[0],
-      remote_host: output.includes('tugce') ? 'tugce' : null,
+      remote_host: remoteHost || (output.includes('tugce') ? 'tugce' : null),
     };
   } catch (error) {
-    return {
-      available: false,
-      cli_available: false,
-      skill_available: skillAvailable,
-      error: error.code || 'NOT_FOUND',
-    };
+    return { available: false, cli_available: Boolean(cliPath), cli_path: cliPath, skill_available: Boolean(skillPath), skill_path: skillPath, error: error.code || 'NOT_FOUND' };
   }
 }
 
+async function xcodePath() {
+  if (process.platform !== 'darwin') return null;
+  try { return (await execute('xcode-select', ['-p'], { timeout: 5000 })).stdout.trim() || null; } catch { return null; }
+}
+
 export async function checkRunnerMaestro() {
-  const skillPaths = [
-    path.join(root, '..', 'test-by-maestro', 'SKILL.md'),
-    path.join(root, 'skills', 'test-by-maestro', 'SKILL.md'),
-    path.join(homedir(), '.agents', 'skills', 'test-by-maestro', 'SKILL.md'),
-  ];
-  const skillAvailable = skillPaths.some(p => existsSync(p));
-
-  let javaAvailable = false;
-  let javaVersion = null;
+  const skillPath = findSkill('test-by-maestro');
+  const cliPath = findExecutable('maestro', [path.join(homedir(), '.maestro', 'bin')]);
+  const java = await findJavaHome();
+  const host = { platform: process.platform, xcode: await xcodePath(), adb: findExecutable('adb', [path.join(homedir(), 'Library', 'Android', 'sdk', 'platform-tools')]) };
+  const base = { cli_path: cliPath, skill_available: Boolean(skillPath), skill_path: skillPath, java: { available: Boolean(java), version: java?.version || null, home: java?.home || null }, host, ios_simulator_supported: Boolean(host.xcode) };
+  if (!cliPath) return { available: false, cli_available: false, supported: false, ...base, error: 'NOT_FOUND' };
+  if (!java) return { available: false, cli_available: true, supported: false, ...base, error: 'JAVA_RUNTIME_MISSING' };
   try {
-    const { stdout, stderr } = await execute('java', ['-version'], { timeout: 3000 });
-    const output = `${stdout}\n${stderr}`;
-    const match = output.match(/version\s+"([\d._]+)"/i);
-    if (match && !output.includes('Unable to locate a Java Runtime')) {
-      javaAvailable = true;
-      javaVersion = match[1];
-    }
-  } catch {}
-
-  try {
-    const { stdout, stderr } = await execute('maestro', ['--version'], { timeout: 5000 });
-    const output = `${stdout}\n${stderr}`;
-    if (output.includes('Unable to locate a Java Runtime')) {
-      return {
-        available: false,
-        cli_available: true,
-        skill_available: skillAvailable,
-        supported: false,
-        java: { available: false, version: null },
-        error: 'JAVA_RUNTIME_MISSING',
-      };
-    }
-    const version = stdout.trim();
-    const versionSupported = /^2\.(1[01]|\d+)\./.test(version);
-    return {
-      available: javaAvailable && versionSupported,
-      cli_available: true,
-      skill_available: skillAvailable,
-      version,
-      supported: versionSupported,
-      java: { available: javaAvailable, version: javaVersion },
-      platform: process.platform,
-      ios_simulator_supported: process.platform === 'darwin',
-    };
+    const env = { ...process.env, JAVA_HOME: java.home, PATH: [path.join(java.home, 'bin'), path.dirname(cliPath), process.env.PATH].join(path.delimiter) };
+    const { stdout } = await execute(cliPath, ['--version'], { timeout: 60000, env });
+    const version = stdout.trim().split('\n').filter(line => /^\d+\.\d+\.\d+/.test(line.trim())).at(-1)?.trim() || stdout.trim();
+    const supported = /^2\.(1[01]|\d+)\./.test(version);
+    return { available: supported, cli_available: true, version, supported, ...base, env: { JAVA_HOME: java.home, PATH_PREPEND: [path.join(java.home, 'bin'), path.dirname(cliPath)] } };
   } catch (error) {
-    return {
-      available: false,
-      cli_available: false,
-      skill_available: skillAvailable,
-      supported: false,
-      java: { available: javaAvailable, version: javaVersion },
-      error: error.code || 'NOT_FOUND',
-    };
+    return { available: false, cli_available: true, supported: false, ...base, error: error.code || 'MAESTRO_FAILED' };
   }
 }
 
 export async function checkRunnerMcpc() {
-  const skillPaths = [
-    path.join(root, '..', 'test-by-mcpc-cli', 'SKILL.md'),
-    path.join(root, 'skills', 'test-by-mcpc-cli', 'SKILL.md'),
-    path.join(homedir(), '.agents', 'skills', 'test-by-mcpc-cli', 'SKILL.md'),
-  ];
-  const skillAvailable = skillPaths.some(p => existsSync(p));
-
+  const skillPath = findSkill('test-by-mcpc-cli');
+  const cliPath = findExecutable('mcpc');
   try {
-    const { stdout } = await execute('mcpc', ['--version'], { timeout: 3000 });
+    const { stdout } = await execute(cliPath || 'mcpc', ['--version'], { timeout: 10000 });
     const version = stdout.trim();
     const versionSupported = /^0\.7\./.test(version);
     return {
       available: versionSupported,
       cli_available: true,
-      skill_available: skillAvailable,
+      cli_path: cliPath,
+      skill_available: Boolean(skillPath),
+      skill_path: skillPath,
       version,
       supported: versionSupported,
       session_first: true,
       skills_extension: true,
     };
   } catch (error) {
-    return {
-      available: false,
-      cli_available: false,
-      skill_available: skillAvailable,
-      supported: false,
-      error: error.code || 'NOT_FOUND',
-    };
+    return { available: false, cli_available: Boolean(cliPath), cli_path: cliPath, skill_available: Boolean(skillPath), skill_path: skillPath, supported: false, error: error.code || 'NOT_FOUND' };
   }
 }
 

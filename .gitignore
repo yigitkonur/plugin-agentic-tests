@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+# Campaign output created by local runs and fixtures
+/agentic-tests/
+/fixtures/*/agentic-tests/
+.claude/*.local.md

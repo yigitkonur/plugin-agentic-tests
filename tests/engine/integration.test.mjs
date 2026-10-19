@@ -7,9 +7,9 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadDependencies } from '../../skills/run-agentic-tests/scripts/lib/dependencies.mjs';
+import { loadDependencies } from '../../plugins/agentic-tests/engine/run-agentic-tests/scripts/lib/dependencies.mjs';
 
-const cli = fileURLToPath(new URL('../../skills/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
+const cli = fileURLToPath(new URL('../../plugins/agentic-tests/engine/run-agentic-tests/scripts/agentic-tests.mjs', import.meta.url));
 const product = fileURLToPath(new URL('./fixtures/product.mjs', import.meta.url));
 const { YAML } = await loadDependencies({ setup: true });
 
