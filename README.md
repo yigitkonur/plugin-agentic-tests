@@ -77,6 +77,13 @@ Your main session's model only runs the controller loop. Every agent sets `omitC
 | A suite of six or more cases, or a repair loop you do not need to steer | `--detach` | A Sonnet orchestrator runs in the background; your session receives one report, and questions arrive as messages |
 | You want to wait for the result but keep your context clean | `/agentic-tests:run-forked …` | The same Sonnet orchestrator runs in a forked context; your turn waits and only the final report enters your context. Questions are collected into the report, because a waiting session cannot answer them |
 
+### Things to know
+
+- **Export the test-account variables before starting Claude Code.** The engine hashes the declared account variables into each target's configuration digest, so a session started without them reports `SOURCE_CHANGED` for a target that was started with them.
+- **Detached runs in headless mode.** `claude -p` stops background agents ten minutes after its last turn. For `--detach` in a headless run, set `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`. Interactive sessions are not affected.
+- **Usage limits.** A campaign spends roughly 1 to 4 million tokens (mostly cached reads), about 1.5 to 4 dollars of list price for a three-journey run. Detached mode keeps your own session at a few thousand tokens; inline mode pays about one short tool call per task in your session.
+- **The repair loop never touches your checkout.** The integrator merges on GitHub; the new target is built from an isolated worktree at the merge commit under `.agentic-test-worktrees/` next to the project.
+
 ## Mobile runner hosts
 
 `select-mac.sh` probes this machine and every host in `~/.ssh/config` (alphabetically, read-only). iOS runs on this machine when it is a Mac with Xcode, Maestro, Java and a simulator, otherwise on the first such Mac; Android runs on the first host with `adb` and Maestro. The environment operator creates its own `agentic-tests-…` simulator and never touches other devices.
