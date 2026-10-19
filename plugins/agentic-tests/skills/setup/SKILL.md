@@ -25,7 +25,7 @@ AT="node ${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs"
    - **mobile**: `app.json` with `expo`, `react-native`, `ios/` or `android/` folders, `.maestro/` flows.
 4. Web runtime: the dev script from `package.json` (`dev`, then `start`) and its port (`--port`, `PORT`, framework default: Next 3000, Vite 5173, Astro 4321). The port must be one the browser host forwards: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000. If the default is not on that list, pick 3000 and note the flag that sets it.
 5. Accounts: variable names the app reads for test users (`.env.example`, `.env.local.example`, README). Never read or copy values from `.env` files.
-6. Mobile only: run `"${CLAUDE_PLUGIN_ROOT}/scripts/select-mac.sh"` and keep its chosen host, platform list and device; read the app ID from `app.json`, `ios/*.xcodeproj` or `android/app/build.gradle`.
+6. Mobile only: run `"${CLAUDE_PLUGIN_ROOT}/scripts/select-mac.sh"` and keep its chosen host, platform list and device; read the app ID from `app.json`, `ios/*.xcodeproj` or `android/app/build.gradle`, and find how a simulator build is made (an Expo or React Native script, `xcodebuild … -sdk iphonesimulator`, a `build.sh`) and where its `.app` or `.apk` lands; record them as `mobile_build_command` and `mobile_app_artifact`.
 7. Effort overrides: if `CLAUDE_CODE_EFFORT_LEVEL` or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is set in the environment, note that it overrides the agents' pinned effort or model.
 
 ## 2. Confirm
@@ -53,6 +53,8 @@ mcp_server: null
 backend_api: null
 mobile_app_id: null
 mobile_platforms: []
+mobile_build_command: null
+mobile_app_artifact: null
 runner_host: local
 github_remote: origin
 ---

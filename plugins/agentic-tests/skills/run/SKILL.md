@@ -17,8 +17,8 @@ Arguments: `$ARGUMENTS`
 ## 1. Resolve the run
 
 1. Project root: `git rev-parse --show-toplevel` (else the current directory).
-2. Settings: read `<project>/.claude/agentic-tests.local.md` if it exists. Its frontmatter may set `domains`, `base_url`, `start_command`, `port`, `forward_ports`, `browser_host`, `accounts` (variable names only), `review`, `host_capacity`, `api_base_url`, `mcp_server`, `mobile_app_id`, `runner_host`. Arguments override settings.
-3. Domain from the target: `http(s)://…` is web (add api when settings list it or the user asks for API checks), `mcp:…` is mcp, `app:…` is mobile. Each domain needs its plugin; if the Agent tool does not list `agentic-tests-<domain>:executor-<domain>`, stop and tell the user to run `/plugin install agentic-tests-<domain>@agentic-tests`.
+2. Settings: read `<project>/.claude/agentic-tests.local.md` if it exists. Its frontmatter may set `domains`, `base_url`, `start_command`, `port`, `forward_ports`, `browser_host`, `accounts` (variable names only), `review`, `host_capacity`, `api_base_url`, `mcp_server`, `backend_api`, `mobile_app_id`, `mobile_platforms`, `mobile_build_command`, `mobile_app_artifact`, `runner_host`. Arguments override settings.
+3. Domains: the settings' `domains` when present. Otherwise from the target: `http(s)://…` is web, `mcp:…` is mcp, `app:…` is mobile; add api when the user asks for API checks. A campaign has one target: with several domains, every case runs against that target, and the others are reached through the URLs the settings give (`api_base_url`, `backend_api`). Each domain needs its plugin; if the Agent tool does not list `agentic-tests-<domain>:executor-<domain>`, stop and tell the user to run `/plugin install agentic-tests-<domain>@agentic-tests`.
 4. Journeys: split the quoted text on `;` or new lines. With no journeys and no cases on disk, ask the user for them (AskUserQuestion, one question, two to four suggested journeys you inferred from the project's routes). With `--resume`, skip to section 5.
 5. Web runtime choice. The remote browser reaches a local app only on these forwarded ports: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000.
    - The target already answers (`curl -s -m 5 -o /dev/null -w '%{http_code}' <url>` returns a status): **Attach** to it. If it is local, its port must be on the list; `EGO_FORWARD_PORTS` is that port.
@@ -36,7 +36,7 @@ $AT doctor
 Stop with the reported `next_actions` if the needed domain is unavailable (`web`, `api`, `mcp`, `mobile`). Then create the campaign (slug from the first journey, kebab-case, at most 30 characters):
 
 ```bash
-$AT init --project "<project>" --slug "<slug>" --mode interactive --host-capacity 4 --max-attempts 3
+$AT init --project "<project>" --slug "<slug>" --mode interactive --host-capacity <settings host_capacity, default 6> --max-attempts 3
 ```
 
 Append the run's decisions to `<campaign>/02-decisions.md`: target, forward ports, browser host, review policy, account variable names, track.
@@ -95,6 +95,8 @@ role: environment-operator
 requested_action: |
   Domain: <domain>. Mode: <Attach <url> | Start <command, or "discover from the project"> on port <port>>.
   Readiness path: <path, default />. Browser host: <host>. EGO_FORWARD_PORTS: <ports>. Clients: <browser, plus http when API cases run>.
+  MCP only: server <config file>:<entry> or URL, required tool <name>, backend <URL or none>.
+  Mobile only: platform <ios|android>, app id <id>, build <command>, artifact <path>, runner host <host or "select">.
 required_inputs:
   - {base: project, path: .}
 ```

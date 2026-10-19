@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Generated agents are current
+        run: node scripts/build.mjs --check
+      - name: Marketplace, manifests, agents and skills
+        run: node scripts/validate.mjs
+      - name: Shell helpers parse
+        run: for f in plugins/*/scripts/*.sh fixtures/mobile-app/build.sh; do bash -n "$f"; done
+
+  engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install the engine's locked dependencies outside the plugin
+        run: node plugins/agentic-tests/engine/run-agentic-tests/scripts/agentic-tests.mjs doctor --setup
+      - name: Engine contracts, CLI, runtimes and reports
+        run: node --test tests/engine/*.test.mjs

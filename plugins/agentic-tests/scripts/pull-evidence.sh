@@ -5,10 +5,20 @@
 # quoted paths on both sides, no -P when the host is an ~/.ssh/config alias,
 # legacy protocol (-O) only when the remote lacks the SFTP subsystem.
 set -euo pipefail
-host=${1:?ssh host}; remote=${2:?absolute remote dir}; local_dir=${3:?local dir}
+#   pull-evidence.sh <host> <absolute remote dir> <local dir> --recursive   (whole tree, for Maestro output)
+host=${1:?ssh host}; remote=${2:?absolute remote dir}; local_dir=${3:?local dir}; mode=${4:-}
 case "$remote" in /*) ;; *) echo "pull-evidence: remote path must be absolute: $remote" >&2; exit 2 ;; esac
 mkdir -p "$local_dir"
 ssh_opts=(-o BatchMode=yes -o ConnectTimeout=10)
+if [ "$mode" = --recursive ]; then
+  if ! timeout 300 scp -q -r -p "${ssh_opts[@]}" "$host:$remote/." "$local_dir/" 2>/tmp/pull-evidence.$$; then
+    if grep -q "subsystem request failed" /tmp/pull-evidence.$$; then timeout 300 scp -q -O -r -p "${ssh_opts[@]}" "$host:$remote/." "$local_dir/" || exit 5
+    else cat /tmp/pull-evidence.$$ >&2; rm -f /tmp/pull-evidence.$$; exit 5; fi
+  fi
+  rm -f /tmp/pull-evidence.$$
+  echo "pulled $(find "$local_dir" -type f | wc -l | tr -d ' ') file(s) recursively from $host:$remote into $local_dir"
+  exit 0
+fi
 files=$(timeout 30 ssh "${ssh_opts[@]}" "$host" "find $(printf '%q' "$remote") -maxdepth 1 -type f" ) || { echo "pull-evidence: cannot list $host:$remote" >&2; exit 3; }
 [ -n "$files" ] || { echo "pull-evidence: no files in $host:$remote" >&2; exit 4; }
 count=0
