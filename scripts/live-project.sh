@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Create a throwaway Git project from a fixture for a live campaign.
-#   scripts/live-project.sh <web|api|mcp|mobile|defect> <target dir> [port]
+#   scripts/live-project.sh <web|api|mcp|mobile|android|defect> <target dir> [port]
+# android: drives ANDROID_APP_ID (default com.android.settings, a system app) on an emulator; set ANDROID_APK=<path> to install an .apk.
 # The project contains .claude/agentic-tests.local.md (git-ignored), so
 # `claude -p --plugin-dir … '/agentic-tests:run …'` run from that directory needs no /agentic-tests:setup.
 # defect: web app with one deliberate bug, pushed to a private GitHub repo (needs `gh` authenticated).
 set -euo pipefail
-kind=${1:?web|api|mcp|mobile|defect}; dir=${2:?target dir}; port=${3:-}
+kind=${1:?web|api|mcp|mobile|android|defect}; dir=${2:?target dir}; port=${3:-}
 here=$(cd "$(dirname "$0")/.." && pwd); fx="$here/fixtures"
 rm -rf "$dir"; mkdir -p "$dir/.claude"
 settings() { # domains port base api backend mcp app extra-notes
@@ -17,7 +18,7 @@ start_command: ${9:-null}
 port: ${2:-null}
 forward_ports: ${10:-null}
 browser_host: tugce
-accounts: [FIXTURE_USER, FIXTURE_PASSWORD]
+accounts: ${ACCOUNTS:-[FIXTURE_USER, FIXTURE_PASSWORD]}
 review: default
 host_capacity: 6
 api_base_url: ${4:-null}
@@ -51,8 +52,13 @@ case "$kind" in
     node -e 'const fs=require("fs"); const [d,p]=process.argv.slice(1); fs.writeFileSync(d+"/mcp.json", JSON.stringify({mcpServers:{"fixture-shop":{command:process.execPath,args:[d+"/server.mjs"],env:{FIXTURE_API_URL:"http://127.0.0.1:"+p}}}},null,2)+"\n")' "$dir" "$p"
     settings "mcp, api" "" "" "http://127.0.0.1:$p" "http://127.0.0.1:$p" "\"mcp.json:fixture-shop\"" "" "Fixture Shop MCP server (server.mjs, stdio) configured in mcp.json (entry fixture-shop). Its tools call the shop API at http://127.0.0.1:$p, already running: attach, never start or stop it. Surface baseline: mcp-surface.json. Requirements: REQUIREMENTS.md. Backend contract: http://127.0.0.1:$p/openapi.json." "" "" "http://127.0.0.1:$p/openapi.json" ;;
   mobile)
+    ACCOUNTS='[]'
     cp "$fx"/mobile-app/{FixtureNotes.swift,Info.plist,build.sh,REQUIREMENTS.md} "$dir"/
     settings mobile "" "" "" "" "" dev.agentictests.fixturenotes "Fixture Notes: SwiftUI app for the iOS simulator. Build ./build.sh (build/FixtureNotes.app). Bundle id dev.agentictests.fixturenotes. Requirements: REQUIREMENTS.md. Accessibility ids: note_input, add_button, note_count, error_message. State is in memory." "" "" "" "[ios]" "./build.sh" "build/FixtureNotes.app" ;;
+  android)
+    ACCOUNTS='[]'; app=${ANDROID_APP_ID:-com.android.settings}; apk=null
+    if [ -n "${ANDROID_APK:-}" ]; then mkdir -p "$dir/app"; cp "$ANDROID_APK" "$dir/app/"; apk="app/$(basename "$ANDROID_APK")"; fi
+    settings mobile "" "" "" "" "" "$app" "Android app $app on an emulator (Maestro). ${ANDROID_NOTES:-It is the Settings app that ships with the system image: no install step.}" "" "" "" "[android]" null "$apk" ;;
   *) echo "unknown kind $kind" >&2; exit 2 ;;
 esac
 printf 'FIXTURE_USER=\nFIXTURE_PASSWORD=\n' > "$dir/.env.example"

@@ -5,6 +5,7 @@ model: sonnet
 effort: high
 color: red
 tools: Bash, Read, Write, Edit, Glob, Grep
+background: true
 omitClaudeMd: true
 plugins: [agentic-tests]
 ---

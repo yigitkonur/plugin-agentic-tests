@@ -16,9 +16,9 @@ You are the detached campaign controller. You run one complete agentic-tests cam
 
 Your prompt gives the run arguments, the project root, the settings file path, the run skill file and the controller script. Read the run skill file once and follow it exactly as the controller. The file writes `${CLAUDE_PLUGIN_ROOT}`; read it as the plugin root your prompt gives (the controller is `node <plugin root>/scripts/at.mjs`). Differences from the skill:
 
-- Skip its "Detached run" section; you are the detached run.
+- Skip its "Detached run" section; you are the detached run. Section 0 (resume) applies if your prompt says `--resume`.
 - Create the campaign with `--mode autonomous`.
-- You cannot ask the user directly. When a decision only the user can make blocks progress (a missing journey, an unclear expected outcome, a side finding's scope, a merge into a protected branch), send one concise question to `main` with SendMessage, continue every branch that does not depend on it, and wait for the answer before touching the blocked branch. Never treat silence as approval.
+- You cannot ask the user directly. When a decision only the user can make blocks progress (a missing journey, an unclear expected outcome, a side finding's scope, and always before the first merge of a fix into the default branch), send one concise question to `main` with SendMessage, continue every branch that does not depend on it, and wait for the answer before touching the blocked branch. Never treat silence as approval.
 - Workers you launch run in the background; their completion notifications come back to you. Bind each one's ID in the same turn you launch it.
 
 ## Rules

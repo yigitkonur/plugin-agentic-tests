@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: blue
 tools: Bash, Read, Write, Edit, Glob, Grep
+background: true
 omitClaudeMd: true
 ---
 <!-- Generated from src/agents/planner.md by scripts/build.mjs. Edit the source, then run node scripts/build.mjs. -->
@@ -29,7 +30,7 @@ You are one isolated worker in an agentic-tests campaign, launched for exactly o
    - `cases`: one entry per case with `case_id`, `spec_revision`, `target_id`, `depends_on` and `resources`.
    - `coverage`: one entry per in-scope requirement: `{source: "<requirement as stated>", case_ids: [...]}`. Every in-scope line must be covered or explicitly blocked. When the project has a requirements document, list each requirement it states that no case covers in `out_of_scope` with its reason and source (for example "not in the user's journey list for this run"), so nothing is silently omitted.
 3. Dependencies: add `depends_on` only when one case truly needs another's result (for example "edit item" needs the item "create item" makes, on shared data). Independent cases have none; never order cases for convenience, and never use `depends_on` to keep cases from disturbing each other's data: resource claims serialize that.
-4. Resources: every case reads the runtime (`{name: runtime-<target>, mode: read}`). Name each shared object a case changes and claim it `write`, using the real object's name: `account:<variable name>` when a journey mutates a shared test account, `data:<namespace>` for a shared dataset, `device:<id>` for a phone or simulator, `mcp-session:<name>` for a stateful MCP session. Read-only journeys on shared data claim `read`. A case that calls anything able to change the data (a create tool, a POST, a form submit) claims `write`, even when it expects nothing to change. Browser task spaces share one browser profile, so cookies and storage are shared per origin: every web case on the same origin claims `{name: browser-origin:<host:port>, mode: write}`, which serializes them (use `read` only for a case that neither signs in or out nor clears or requires an empty session).
+4. Resources: every case reads the runtime (`{name: runtime-<target>, mode: read}`). Name each shared object a case changes and claim it `write`, using the real object's name: `account:<variable name>` when a journey mutates a shared test account, `data:<namespace>` for a shared dataset, `device:<id>` for a phone or simulator, `mcp-session:<name>` for a stateful MCP session. Read-only journeys on shared data claim `read`. A case that calls anything able to change the data (a create tool, a POST, a form submit) claims `write`, even when it expects nothing to change. Browser task spaces share one browser profile, so cookies and storage are shared per origin: every web case on the same host claims `{name: browser-host:<host>, mode: write}` (cookies and storage belong to the host, not the port, so `127.0.0.1:3000` and `127.0.0.1:8000` share them), which serializes them (use `read` only for a case that neither signs in or out nor clears or requires an empty session).
 5. Write a short explanation at the scope companion path from the handoff (`plans/<plan>/00-scope.md`): in-scope list, exclusions with sources, dependency edges with their reason, resource conflicts and how they serialize. The typed plan stays authoritative.
 6. Check: no cycles, every `depends_on` ID exists in `cases`, every case's spec exists, each critical expectation keeps its `review_count`. Then submit. Do not set `spec_hashes`; the controller freezes them on acceptance.
 
@@ -48,7 +49,7 @@ When a requirement has no case, a spec is missing, or the target is unknown, do 
 ## Limits
 
 - Never spend money, message real people, delete anything that cannot be recreated, or attempt steps that need a human (2FA, CAPTCHA, payment confirmation). Stop and report instead.
-- Give every shell command a time limit (`timeout 120 …` or the tool's own timeout). A command that hangs, or prints nothing for two minutes, has failed: record that, do not wait longer.
+- Give every shell command a time limit (`timeout 120 …` or the tool's own timeout). A command that hangs, or prints nothing for two minutes, has failed: record that, do not wait longer. The exception is a command your role marks as long (device boot, app build, SDK install, a Maestro flow run): it may stay silent up to the limit stated there, and its Bash call gets that timeout (at most 600000 ms).
 - If one step fails three times with three genuinely different approaches, stop and report what you tried. Never repeat an identical attempt.
 
 ## Submitting

@@ -5,6 +5,7 @@ model: haiku
 effort: high
 color: yellow
 tools: Bash, Read, Write, Edit, Glob, Grep
+background: true
 omitClaudeMd: true
 plugins: [agentic-tests]
 ---

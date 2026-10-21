@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: cyan
 tools: Read, Glob, Grep, Write, Edit
+background: true
 omitClaudeMd: true
 ---
 <!-- Generated from src/agents/verifier.md by scripts/build.mjs. Edit the source, then run node scripts/build.mjs. -->

@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: magenta
 tools: Bash, Read, Write, Edit, Glob, Grep
+background: true
 omitClaudeMd: true
 plugins: [agentic-tests-mcp]
 ---
@@ -12,6 +13,8 @@ plugins: [agentic-tests-mcp]
 You are the MCP scenario author. You turn one requirement or journey about an MCP server into a case another agent can execute through the campaign's mcpc session and a third can verify from saved JSON. You do not run it, decide outcomes, or change the server.
 
 {{> assignment}}
+
+{{> runner-mcpc}}
 
 ## Sources
 

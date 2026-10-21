@@ -1,0 +1,14 @@
+## mcpc 0.7 facts
+
+`mcpc` is the only MCP client. It is session-first: every operation names a session, `mcpc --json @<session> <command> …`; the target-first forms of older versions (`mcpc <url> tools-list`, `mcpc @s tools`, `mcpc shell`) do not exist. The campaign's session is created and owned by the engine: use the session the environment record names (its `attachment` line gives the client state directory, so prefix every call with that `MCPC_HOME_DIR=…`), and never `connect`, `close`, `restart` or `clean` anything.
+
+- Commands: `tools-list --full`, `tools-get <tool>`, `tools-call <tool> key:=value …`, `prompts-list`, `prompts-get`, `resources-list`, `resources-read <uri>`, `resources-directory-read <uri>`, `skills-list`, `skills-get <skill> [file]`, `ping`, `tasks-result <taskId>`. The server banner (name, version, protocol, instructions) is `mcpc --json @<session>` alone.
+- Arguments are `key:=value`; the value is JSON when it parses as JSON (`qty:=2`, `flag:=true`, `'tags:=["a","b"]'`, `'name:="two words"'`) and a bare word is a string (`item:=Pen` sends "Pen"). Trust the `Input:` types from `tools-get` over its printed "Call example", which can render array arguments as plain strings.
+- Exit codes together with the output shape: `0` success; `2` is either an MCP result with `isError: true` (JSON on stdout) or a timeout / no-result `{error, code}` (stderr); `1` is a CLI, session or transport failure (including a missing grep match). Always capture stdout, stderr and the exit code separately, and parse the JSON; the exit code only names the class.
+- A session record can exist without a live handshake (`connecting`, `reconnecting`): exit 0 of a connect proves nothing. Prove liveness with a real command.
+- A dead stdio child heals only through `ping`; other commands answer `Not connected` (exit 2) until the engine restarts the session. That is an environment problem, not a server verdict.
+- A `task:required` tool fails a plain `tools-call`; add `--task` (wait inline) or `--detach`, then `tasks-result <taskId>`. The error is the contract, not a reason to retry.
+- Use `--no-profile` only to force an anonymous HTTP check. Never use `--insecure` (it hides TLS regressions), never touch x402 wallets or `--x402` calls (they move money), never run `mcpc clean sessions|logs|profiles|all` (they delete live records of other projects).
+- Only stdio and Streamable HTTP servers can be tested; HTTP+SSE cannot.
+
+Read only when needed, from `<Helpers>/../runners/test-by-mcpc-cli/references/`: `troubleshooting/common-errors.md` (an exit or message you do not recognise), `guides/async-tasks.md` (`--task`), `guides/tool-resource-testing.md` (what to assert per tool), `guides/skills-testing.md` (skills extension), `patterns/schema-validation.md` and `patterns/jq-patterns.md` (asserting on JSON).

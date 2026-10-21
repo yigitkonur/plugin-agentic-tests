@@ -10,14 +10,12 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 
 Write `<project>/.claude/agentic-tests.local.md`, the settings `/agentic-tests:run` reads. Detect everything you can; ask only what the project cannot tell you. Arguments: `$ARGUMENTS`. With `--yes`, ask nothing and use detected values and arguments.
 
-```bash
-AT="node ${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs"
-```
+The controller is `node "${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs" <command>`, written `$AT` below; always type the full form (shell state does not persist between calls and zsh does not split a variable into words).
 
 ## 1. Detect
 
 1. Project root: `git rev-parse --show-toplevel` (else the current directory). GitHub remote: `git remote get-url origin` (the repair loop needs one; note when absent).
-2. Runners: `$AT doctor`. Keep `web.available`, `web.remote_host`, `mcp.available`, `mobile.available`, `mobile.java_home`, `mobile.xcode`.
+2. Runners: `$AT doctor --project "<project>"` (the first call installs the engine's locked dependencies: needs npm and network once). Keep `web.available`, `web.remote_host`, `mcp.available`, `mobile.available`, `mobile.java_home`, `mobile.xcode`, `timeout` (false means `brew install coreutils`), and `project` (git, clean, remote). The runner documentation ships inside this plugin; none of the `ego-browser`, `test-by-mcpc-cli` or `test-by-maestro` skills needs to be installed, only their programs.
 3. Domains, from the project files (read `package.json`, top-level files and folders; do not read the whole tree):
    - **web**: a frontend framework or dev server (`next`, `vite`, `react-scripts`, `astro`, `@remix-run`, `nuxt`, `svelte`, an `index.html`, server-rendered pages).
    - **api**: HTTP routes (`express`, `fastify`, `hono`, `koa`, `@nestjs`, route folders like `app/api`, `routes/`), an OpenAPI file (`openapi.*`, `swagger.*`), or a backend such as Supabase (`@supabase/supabase-js`, `supabase/` folder).
@@ -27,6 +25,8 @@ AT="node ${CLAUDE_PLUGIN_ROOT}/scripts/at.mjs"
 5. Accounts: variable names the app reads for test users (`.env.example`, `.env.local.example`, README). Never read or copy values from `.env` files.
 6. Mobile only: run `"${CLAUDE_PLUGIN_ROOT}/scripts/select-mac.sh"` and keep its chosen host, platform list and device; read the app ID from `app.json`, `ios/*.xcodeproj` or `android/app/build.gradle`, and find how a simulator build is made (an Expo or React Native script, `xcodebuild … -sdk iphonesimulator`, a `build.sh`) and where its `.app` or `.apk` lands; record them as `mobile_build_command` and `mobile_app_artifact`.
 7. Effort overrides: if `CLAUDE_CODE_EFFORT_LEVEL` or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` is set in the environment, note that it overrides the agents' pinned effort or model.
+8. Permissions: the agents run in the background and cannot answer permission prompts, so anything not pre-approved is denied. Read `permissions.defaultMode` from the user, project and local settings files. If it is not `bypassPermissions`, tell the user to run campaigns in a trusted project with that mode, or to allow `Bash`, `Read`, `Write(agentic-tests/**)`, `Edit(agentic-tests/**)` and, for the repair loop, `Bash(gh *)` and `Bash(git *)`.
+9. Account variables: for each name in `accounts` check it is set in this shell (`$AT doctor --accounts A,B` lists `accounts_missing`); the user must export them in the shell that starts Claude Code, because the engine hashes them into every target's identity.
 
 ## 2. Confirm
 

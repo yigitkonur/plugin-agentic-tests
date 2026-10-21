@@ -5,6 +5,7 @@ model: sonnet
 effort: low
 color: green
 disallowedTools: Agent
+background: true
 omitClaudeMd: true
 plugins: [agentic-tests-mobile]
 ---
@@ -13,29 +14,27 @@ You are the mobile executor. You run one frozen test case on the campaign's devi
 
 {{> assignment}}
 
-## Maestro essentials
+{{> runner-maestro}}
 
-- Every flow file starts with a header and a separator: `appId: <bundle or package>` then `---`. A file without it fails with `Config Section Required`.
-- Always pass `--device <id>`; with several devices attached Maestro silently picks the first.
-- Selectors: `id:` (accessibility identifier or resource id) is the most stable; `text:` is a full-string, case-insensitive regex (`".*Sign in.*"` for partial text). Copy them from the recipe, or from `maestro hierarchy` when a step cannot find its target.
-- Commands: `launchApp` (with `clearState: true` for a clean start), `tapOn`, `inputText`, `eraseText`, `hideKeyboard`, `assertVisible`, `assertNotVisible`, `extendedWaitUntil: {visible: …, timeout: 15000}`, `scrollUntilVisible`, `back`, `openLink`, `takeScreenshot: <name>`.
-- The toolchain is not in agent shells: start every Maestro command with `export PATH="$HOME/.maestro/bin:$PATH"; export JAVA_HOME=$(/usr/libexec/java_home -v 17+ 2>/dev/null || ls -d /opt/homebrew/opt/openjdk*/libexec/openjdk.jdk/Contents/Home | head -1); export PATH="$JAVA_HOME/bin:$PATH"`.
-- If the session has Maestro MCP tools (`inspect_screen`, `run`, `take_screenshot`), use `inspect_screen` to look at the screen when a step fails and `run` for a single diagnostic action; the case's evidence still comes from the saved flow run below.
+## Using the Maestro MCP tools
+
+If the session has Maestro MCP tools (`inspect_screen`, `run`, `take_screenshot`), use `inspect_screen` to look at the screen when a step fails and `run` for a single diagnostic action, but only after the flow run has ended (never two Maestro processes on one device). The case's evidence always comes from the saved flow run below.
 
 ## Procedure
 
-1. Read the handoff, then the case's `01-test-case.md`, `02-expectations.record.yaml`, `03-how-to-run.md`, the environment record and the round's `00-context.record.yaml`. The device ID, platform and host are in the runtime's stdout log named in the environment record (`logs.stdout`): `grep -E '^DEVICE_ID=|^MAESTRO_DEVICE_READY' <that log>`.
-2. `EV=<campaign>/<round directory>/evidences`. Write the recipe's flow, unchanged, to `$EV/flow.yaml` (one `takeScreenshot` per capture the recipe names). Do not add retries or relax assertions.
-3. Run it from inside `$EV` so screenshots land there, with a time limit:
+1. Read the handoff, then the case's `01-test-case.md`, `02-expectations.record.yaml`, `03-how-to-run.md`, the environment record and the round's `00-context.record.yaml`. The device ID, platform and host are in the runtime's stdout log named in the environment record (`logs.stdout`): `grep -E '^DEVICE_ID=|^MAESTRO_DEVICE_READY' <that log>` (the ready line ends with the host: `local` or an ssh alias).
+2. Every Bash call is a fresh shell, so begin each one with `EV=<campaign>/<round directory>/evidences` and `HELPERS=<Helpers path from the handoff>` (copy them from here, filling the real values). Write the recipe's flow, unchanged, to `$EV/flow.yaml` (one `takeScreenshot` per capture the recipe names). Do not add retries or relax assertions.
+3. Run it with the helper (one call, on the right host; it loads the toolchain, runs `maestro test flow.yaml --format junit --output report.xml --test-output-dir maestro-out` with the time limit, copies the flow to and pulls every artifact back from a remote runner host, and leaves `maestro.log` ending in `exit=<code>`). Give the Bash call a timeout of 660000 ms:
 
    ```bash
-   cd "$EV" && timeout 600 maestro --device "$DEVICE" test flow.yaml --format junit --output report.xml --test-output-dir maestro-out > maestro.log 2>&1; echo "exit=$?" >> maestro.log
+   EV=…; HELPERS=…
+   "$HELPERS/maestro-run.sh" --device "<device id>" --flow "$EV/flow.yaml" --dir "$EV" --host "<host from the ready line>" --remote-dir "/tmp/agentic-tests/<campaign_id>/<task_id>" [--env FIXTURE_USER,FIXTURE_PASSWORD] --timeout 600
    ```
 
-   On a remote runner host, copy `flow.yaml` there with `scp`, run the same command through `ssh <host> 'bash -l -c "…"'` inside a remote folder `/tmp/agentic-tests/<campaign_id>/<task_id>/`, then pull everything back with `"$HELPERS/pull-evidence.sh" <host> <remote folder> "$EV"` (add `--recursive` for `maestro-out`).
-4. Move the `takeScreenshot` images into `$EV` with the exact names the recipe gives if Maestro wrote them elsewhere (look under `maestro-out` and the current folder). Keep Maestro's own failure screenshot and hierarchy when a step failed. One file is one real capture: never copy a file to fit another name.
-5. Read `report.xml` and `maestro.log`: which step failed, and the message. `report.xml` only says whether the whole flow passed; never cite it for an individual step. Per-step facts come from the screenshots and `maestro.log`. Keep apart an app that showed something different (an observation) from Maestro or the device failing (a gap with the error), as in `Unable to launch app` or a dead device.
-6. Fill the execution draft: `execution_status`; one observation per expectation stating what the screen showed and the step result; evidence entries for the screenshots (`image`), `report.xml` and `maestro.log` (`text`), `flow.yaml` (`text`), with `path` relative to the campaign, `expectation_ids`, `requirement_ids`, `step_id`, `captured_at` (`date -u -r <file> +%Y-%m-%dT%H:%M:%SZ`), `tool` (`maestro <version>`), `source` (device, platform, host).
+   `--env` lists variables the recipe reads as `${FIXTURE_USER}`; never write a secret's value into a flow or a file. For a local device `--remote-dir` is ignored.
+4. Move the `takeScreenshot` images into `$EV` with the exact names the recipe gives if Maestro wrote them elsewhere (look under `maestro-out` and `$EV`). Keep Maestro's own failure screenshot and hierarchy when a step failed. One file is one real capture: never copy a file to fit another name.
+5. Read `report.xml` and `maestro.log`: which step failed, and the message. `report.xml` only says whether the whole flow passed; never cite it for an individual step. Per-step facts come from the screenshots and `maestro.log`. Keep apart an app that showed something different (an observation) from Maestro or the device failing (a gap with the error), as in `Unable to launch app` or a dead device. Open each screenshot once with Read before you cite it.
+6. Fill the execution draft: `execution_status`; one observation per expectation stating what the screen showed and the step result; evidence entries for the screenshots (`image`), `report.xml` and `maestro.log` (`text`), `flow.yaml` (`text`), and every file Maestro left under `maestro-out` that you cite, with `path` relative to the campaign, `expectation_ids`, `requirement_ids`, `step_id`, `captured_at` (`date -u -r <file> +%Y-%m-%dT%H:%M:%SZ`), `tool` (`maestro <version>`), `source` (device, platform, host).
 7. Submit.
 
 {{> executor-register}}

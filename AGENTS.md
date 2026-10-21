@@ -11,12 +11,15 @@ plugins/agentic-tests/            core plugin
   skills/run, skills/setup        /agentic-tests:run and /agentic-tests:setup (manual-only)
   agents/                         GENERATED: planner, plan-auditor, verifier, diagnostician, ticket-writer,
                                   implementer, integrator, orchestrator
-  scripts/                        at.mjs (controller wrapper), pull-evidence.sh, schema-check.mjs,
-                                  select-mac.sh, device-session.sh
+  runners/                        vendored docs of ego-browser, test-by-mcpc-cli, test-by-maestro (VENDORED.md)
+  scripts/                        at.mjs (controller wrapper: batching, teardown, leftovers), pull-evidence.sh,
+                                  schema-check.mjs, select-mac.sh, device-session.sh, maestro-env.sh, maestro-run.sh,
+                                  android-setup.sh, ego-run.sh, timeout.sh
 plugins/agentic-tests-web|api|mcp|mobile/agents/   GENERATED domain agents
 plugins/agentic-tests-mobile/.mcp.json, scripts/maestro-mcp.sh   Maestro MCP server for mobile sessions
 src/agents/*.md                   agent sources; the build-only key `plugins: [...]` lists target plugins
-src/fragments/*.md                shared prompt fragments, inlined with {{> name}}
+src/fragments/*.md                shared prompt fragments, inlined with {{> name}}; runner-*.md are the runner cards
+scripts/vendor-runners.sh         refreshes plugins/agentic-tests/runners from ~/.agents/skills
 scripts/build.mjs                 renders src into plugins/*/agents (--check in CI)
 scripts/validate.mjs              manifests, versions, agent frontmatter, manual-only skills, helpers
 tests/engine/                     the engine's node:test suite
@@ -30,7 +33,8 @@ fixtures/                         web app, API (OpenAPI), MCP server, SwiftUI ap
 - Agents pin `model` and `effort` in frontmatter, set `omitClaudeMd: true`, and carry the safety rules in `src/fragments/limits.md` because they do not read the user's CLAUDE.md.
 - Reviewers (verifier, plan-auditor) have no shell. They edit a draft; the controller validates and publishes it.
 - The engine is the source of truth for records. Do not weaken its invariants (distinct worker handles, blind review, accepted is not PASS) to make a run pass. Fix the prompt or the orchestration instead.
-- Helper scripts live once, in the core plugin's `scripts/`; handoffs give workers their path (`Helpers:`).
+- Helper scripts live once, in the core plugin's `scripts/`; handoffs give workers their path (`Helpers:`). Shell snippets that agents `source` must work in zsh and bash (no unmatched globs). Secrets travel by stdin or exported variables, never as literals on a command line.
+- The runner cards (`src/fragments/runner-*.md`) are curated from the vendored docs. When `vendor-runners.sh` changes a vendored file, re-read the matching card.
 - Bump `VERSION`, every `plugin.json` version and the marketplace versions together; `validate.mjs` fails on drift.
 
 ## Commands

@@ -1,6 +1,7 @@
 // Fixture Shop: a dependency-free web app for agentic-tests live checks.
-// Credentials come from FIXTURE_USER / FIXTURE_PASSWORD (defaults below). PORT defaults to 3000.
+// Credentials come from FIXTURE_USER / FIXTURE_PASSWORD (defaults below). PORT defaults to 3000. A sign-in writes data.json in the working directory.
 import http from 'node:http';
+import { writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
 const port = Number(process.env.PORT || 3000);
@@ -35,6 +36,7 @@ const server = http.createServer((req, res) => {
       if (!user || user.password !== form.get('password')) return send(401, page('Sign in', loginForm('Invalid email or password')));
       const sid = randomUUID();
       sessions.set(sid, user);
+      writeFileSync('data.json', JSON.stringify({ last_sign_in: user.email, at: new Date().toISOString() })); // the app keeps a small file in its own folder, like many real apps
       send(303, '', { location: '/dashboard', 'set-cookie': `sid=${sid}; HttpOnly; SameSite=Lax; Path=/` });
     });
     return;

@@ -323,9 +323,15 @@ async function createTask(options, state, suppliedRequest) {
         const ego = await checkRunnerEgoBrowser();
         if (!ego.available) fail(RUNNER_ERROR_CODES.RUNNER_CLI_MISSING, 'ego-browser CLI is required for web testing. Install from citrolabs/ego-lite.', [{ runner: 'ego-browser', repo: 'citrolabs/ego-lite' }], 5);
       } else if (runtimeType === 'mobile') {
-        const maestro = await checkRunnerMaestro();
-        if (!maestro.java?.available) fail(RUNNER_ERROR_CODES.JAVA_RUNTIME_MISSING, 'Java 17+ is required for Maestro mobile testing ($JAVA_HOME).', [{ runner: 'maestro' }], 5);
-        if (!maestro.available) fail(RUNNER_ERROR_CODES.RUNNER_CLI_MISSING, 'Maestro CLI >= 2.10.0 / 2.11.0 is required for mobile testing.', [{ runner: 'maestro' }], 5);
+        // The runner host that owns the device (`--host <ssh alias>` in the device command) carries Java and Maestro;
+        // only a local runner is checked on this machine.
+        const argv = environment.record.command?.argv || [];
+        const runnerHost = argv.includes('--host') ? argv[argv.indexOf('--host') + 1] : 'local';
+        if (!runnerHost || runnerHost === 'local') {
+          const maestro = await checkRunnerMaestro();
+          if (!maestro.java?.available) fail(RUNNER_ERROR_CODES.JAVA_RUNTIME_MISSING, 'Java 17+ is required for Maestro mobile testing ($JAVA_HOME).', [{ runner: 'maestro' }], 5);
+          if (!maestro.available) fail(RUNNER_ERROR_CODES.RUNNER_CLI_MISSING, 'Maestro CLI >= 2.10.0 / 2.11.0 is required for mobile testing.', [{ runner: 'maestro' }], 5);
+        }
       } else if (runtimeType === 'mcp_stdio' || runtimeType === 'mcp_http') {
         const mcpc = await checkRunnerMcpc();
         if (!mcpc.available) fail(RUNNER_ERROR_CODES.RUNNER_CLI_MISSING, 'mcpc 0.7.x session-first CLI is required for MCP testing.', [{ runner: 'mcpc' }], 5);
