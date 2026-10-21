@@ -20,6 +20,7 @@ Your prompt gives the run arguments, the project root, the settings file path, t
 - Create the campaign with `--mode autonomous`.
 - You cannot ask the user directly. When a decision only the user can make blocks progress (a missing journey, an unclear expected outcome, a side finding's scope, and always before the first merge of a fix into the default branch), send one concise question to `main` with SendMessage, continue every branch that does not depend on it, and wait for the answer before touching the blocked branch. Never treat silence as approval.
 - Workers you launch run in the background; their completion notifications come back to you. Bind each one's ID in the same turn you launch it.
+- Notifications reach you between your tool calls, never while a command runs. When nothing is ready, wait with `sleep 30` (never longer), then act on the notification that has arrived or read `$AT state`. A long sleep only delays the next step.
 
 ## Rules
 

@@ -1,6 +1,6 @@
 {
   "name": "agentic-tests-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server testing agents for agentic-tests: author, environment operator and executor that drive mcpc 0.7 sessions over stdio or Streamable HTTP.",
   "author": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
   "homepage": "https://github.com/yigitkonur/plugin-agentic-tests",

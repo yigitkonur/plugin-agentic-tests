@@ -26,18 +26,20 @@ run() { # run a shell snippet on the device host, with the Maestro/Android toolc
 log() { echo "[device-session $(date -u +%H:%M:%S)] $*"; }
 
 booted_by_me=false; created_by_me=false; device=""; device_udid=""
-cleanup() {
+on_exit() { # runs on every exit, including a failed boot: what this session booted or created goes away with it
+  rc=$?; trap - EXIT
   if [ "$booted_by_me" = true ] && [ -n "$device" ]; then
     log "shutting down $device (booted by this session)"
     if [ "$platform" = ios ]; then run "xcrun simctl shutdown $device" >/dev/null 2>&1; else run "adb -s $device emu kill" >/dev/null 2>&1; fi
   fi
-  if [ "$created_by_me" = true ]; then # a device this session created, named agentic-tests-*, goes away with it
+  if [ "$created_by_me" = true ]; then # only devices this session created, named agentic-tests-*
     log "deleting $name (created by this session)"
-    if [ "$platform" = ios ]; then run "xcrun simctl delete '$device_udid'" >/dev/null 2>&1; else sleep 3; run "avdmanager delete avd -n '$name'" >/dev/null 2>&1; fi
+    if [ "$platform" = ios ]; then [ -n "$device_udid" ] && run "xcrun simctl delete '$device_udid'" >/dev/null 2>&1; else sleep 3; run "avdmanager delete avd -n '$name'" >/dev/null 2>&1; fi
   fi
-  exit 0
+  exit "$rc"
 }
-trap cleanup TERM INT
+trap on_exit EXIT
+trap 'exit 0' TERM INT
 
 copy_app() { # prints the app path on the device host
   if [ "$host" = local ]; then echo "$app"; return; fi
@@ -84,12 +86,14 @@ else
       log "creating AVD $name from $pkg"
       run "echo no | avdmanager create avd -n '$name' -k '$pkg' -d pixel_6" >/dev/null || { log "AVD creation failed"; exit 3; }
       created_by_me=true
+      # The default data partition is 6-10 GB and the emulator wants twice that free; a test app needs far less.
+      run "f=\"\$HOME/.android/avd/$name.avd/config.ini\"; grep -q '^disk.dataPartition.size' \"\$f\" && sed -i.bak 's/^disk.dataPartition.size=.*/disk.dataPartition.size=3G/' \"\$f\" || echo 'disk.dataPartition.size=3G' >> \"\$f\"; rm -f \"\$f.bak\"" >/dev/null
     fi
     port=$(run 'for p in $(seq 5560 2 5584); do lsof -nP -iTCP:$p -sTCP:LISTEN >/dev/null 2>&1 || lsof -nP -iTCP:$((p+1)) -sTCP:LISTEN >/dev/null 2>&1 || { echo $p; break; }; done')
     [ -n "$port" ] || { log "no free emulator port in 5560-5584"; exit 3; }
     device="emulator-$port"
     log "starting emulator $name on port $port"
-    run "nohup emulator -avd '$name' -port $port -no-window -no-audio -no-boot-anim -no-snapshot >/tmp/$name-emulator.log 2>&1 &" ; booted_by_me=true
+    run "nohup emulator -avd '$name' -port $port -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics >/tmp/$name-emulator.log 2>&1 &" ; booted_by_me=true
     run "timeout 300 adb -s $device wait-for-device && timeout 300 bash -c 'until [ \"\$(adb -s $device shell getprop sys.boot_completed 2>/dev/null | tr -d \"\\r\")\" = 1 ]; do sleep 2; done'" || { log "emulator did not boot (see /tmp/$name-emulator.log on $host)"; exit 3; }
   fi
   actual=$(run "adb -s $device emu avd name 2>/dev/null | head -1 | tr -d '\r'")

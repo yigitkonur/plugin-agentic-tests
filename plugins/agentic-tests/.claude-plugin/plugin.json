@@ -1,6 +1,6 @@
 {
   "name": "agentic-tests",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agentic E2E test campaigns on Claude Code: /agentic-tests:run drives model-pinned planner, auditor, verifier and repair agents over a bundled engine with blind evidence review and an HTML report. Install a domain plugin next to it.",
   "author": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
   "homepage": "https://github.com/yigitkonur/plugin-agentic-tests",

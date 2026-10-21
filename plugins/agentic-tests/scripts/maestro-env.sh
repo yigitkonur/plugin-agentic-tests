@@ -23,6 +23,7 @@ if [ -z "${ANDROID_HOME:-}" ]; then
   done
   export ANDROID_HOME
 fi
+[ -n "${ANDROID_HOME:-}" ] && export ANDROID_SDK_ROOT="$ANDROID_HOME" # avdmanager and the emulator look here, not at the command-line tools' own folder
 [ -n "${ANDROID_HOME:-}" ] && export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 command -v timeout >/dev/null 2>&1 || timeout() { # stock Mac or bare remote shell: gtimeout, else perl
   if command -v gtimeout >/dev/null 2>&1; then gtimeout "$@"; else _at_s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$_at_s" "$@"; fi

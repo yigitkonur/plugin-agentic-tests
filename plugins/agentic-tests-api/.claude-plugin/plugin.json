@@ -1,6 +1,6 @@
 {
   "name": "agentic-tests-api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "HTTP API testing agents for agentic-tests: author, environment operator and executor that test endpoints with curl and OpenAPI checks.",
   "author": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
   "homepage": "https://github.com/yigitkonur/plugin-agentic-tests",

@@ -14,7 +14,8 @@
 //   at.mjs report   --campaign C [--port N]               (reconcile, build, serve)
 //   at.mjs cost     --campaign C --task-id J --tokens N [--model M]
 //   at.mjs leftovers --project P                           (running engine-owned targets of earlier campaigns)
-//   at.mjs teardown --campaign C                           (stop its runtimes, remove its worktrees and devices; keeps the report server)
+//   at.mjs teardown --campaign C                           (stop its runtimes, remove its worktrees and devices, blank session secrets; keeps the report server)
+//   at.mjs scrub    --campaign C                           (blank resolved server secrets in mcpc owner files)
 //   at.mjs <any engine command ...>                       (passthrough)
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
@@ -85,6 +86,27 @@ function leftovers(project) {
   return found;
 }
 
+
+// mcpc expands ${NAME} references and the engine adapter records the resolved server config in owner.json:
+// blank the values of the variables the target declared (env_names) once its session is stopped.
+function scrubSessionSecrets(campaign, environments) {
+  const scrubbed = [];
+  for (const e of environments) {
+    const names = new Set(e.command?.env_names || []);
+    const file = path.join(campaign, 'environments', e.target_id, 'mcpc', 'owner.json');
+    if (!names.size || !existsSync(file)) continue;
+    try {
+      const owner = JSON.parse(readFileSync(file, 'utf8'));
+      const env = owner.native?.server?.env;
+      if (!env) continue;
+      let changed = false;
+      for (const name of Object.keys(env)) if (names.has(name) && env[name] !== '[REDACTED]') { env[name] = '[REDACTED]'; changed = true; }
+      if (changed) { writeFileSync(file, JSON.stringify(owner, null, 2) + '\n', { mode: 0o600 }); scrubbed.push(e.target_id); }
+    } catch { /* an unreadable owner file is left as it is */ }
+  }
+  return scrubbed;
+}
+
 // Stop the campaign's runtimes, then remove what only this campaign created: successor worktrees and its devices.
 function teardown(campaign) {
   const actions = [];
@@ -112,6 +134,8 @@ function teardown(campaign) {
       actions.push({ device_sweep: name, host, output: (swept.stdout || '').trim() || 'nothing left' });
     }
   }
+  const scrubbed = scrubSessionSecrets(campaign, read('environment'));
+  if (scrubbed.length) actions.push({ secrets_scrubbed_from: scrubbed.map(target => `environments/${target}/mcpc/owner.json`) });
   if (project && campaignId) {
     const dir = path.join(path.dirname(project), '.agentic-test-worktrees', campaignId);
     if (existsSync(dir)) {
@@ -256,10 +280,14 @@ if (command === 'doctor') {
   print({ ok: true, ...recordCost(need(options, 'campaign'), need(options, 'task-id'), Number(need(options, 'tokens')), options.model) });
 } else if (command === 'leftovers') {
   print({ ok: true, leftovers: leftovers(need(options, 'project')) });
+} else if (command === 'scrub') {
+  const campaign = need(options, 'campaign');
+  const environments = run(['records', '--campaign', campaign, '--kind', 'environment', '--format', 'json']).data?.records || [];
+  print({ ok: true, scrubbed: scrubSessionSecrets(campaign, environments) });
 } else if (command === 'teardown') {
   print(teardown(need(options, 'campaign')));
 } else if (!command || command === 'help' || command === '--help') {
-  print({ ok: true, commands: ['doctor', 'init', 'launch', 'dispatch', 'bind', 'publish', 'close', 'state', 'report', 'cost', 'leftovers', 'teardown', '<engine passthrough>'], engine });
+  print({ ok: true, commands: ['doctor', 'init', 'launch', 'dispatch', 'bind', 'publish', 'close', 'state', 'report', 'cost', 'leftovers', 'scrub', 'teardown', '<engine passthrough>'], engine });
 } else {
   const result = spawnSync(process.execPath, [engine, command, ...rest], { stdio: 'inherit', env });
   process.exit(result.status ?? 6);

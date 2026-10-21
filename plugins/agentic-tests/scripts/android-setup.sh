@@ -34,6 +34,8 @@ fi
 mkdir -p "$sdk"
 yes | sdkmanager --sdk_root="$sdk" --licenses >/dev/null 2>&1
 need=""
+# avdmanager only finds system images when it lives inside the SDK it manages, so the SDK gets its own copy of the command-line tools.
+[ -x "$sdk/cmdline-tools/latest/bin/avdmanager" ] || need="$need cmdline-tools;latest"
 [ -x "$sdk/platform-tools/adb" ] || need="$need platform-tools"
 [ -x "$sdk/emulator/emulator" ] || need="$need emulator"
 [ -d "$sdk/system-images/android-$api/google_apis/$abi" ] || need="$need $image"

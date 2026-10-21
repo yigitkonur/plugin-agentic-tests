@@ -1,6 +1,6 @@
 {
   "name": "agentic-tests-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Web testing agents for agentic-tests: author, environment operator and executor that drive a real browser through ego-browser.",
   "author": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
   "homepage": "https://github.com/yigitkonur/plugin-agentic-tests",

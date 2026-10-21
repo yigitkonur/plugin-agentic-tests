@@ -10,5 +10,6 @@
 - A `task:required` tool fails a plain `tools-call`; add `--task` (wait inline) or `--detach`, then `tasks-result <taskId>`. The error is the contract, not a reason to retry.
 - Use `--no-profile` only to force an anonymous HTTP check. Never use `--insecure` (it hides TLS regressions), never touch x402 wallets or `--x402` calls (they move money), never run `mcpc clean sessions|logs|profiles|all` (they delete live records of other projects).
 - Only stdio and Streamable HTTP servers can be tested; HTTP+SSE cannot.
+- The session's state files (`sessions.json`, `owner.json`, bridge logs under the client directory and the environment's `mcpc` folder) hold the server's resolved environment, secrets included. Never `cat`, Read, grep into or copy them, and never put their content in a note or a final line. To check them, extract fields that carry no values, for example `node -e` printing only `session_id` and `pid`.
 
 Read only when needed, from `<Helpers>/../runners/test-by-mcpc-cli/references/`: `troubleshooting/common-errors.md` (an exit or message you do not recognise), `guides/async-tasks.md` (`--task`), `guides/tool-resource-testing.md` (what to assert per tool), `guides/skills-testing.md` (skills extension), `patterns/schema-validation.md` and `patterns/jq-patterns.md` (asserting on JSON).

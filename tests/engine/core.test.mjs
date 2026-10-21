@@ -82,8 +82,9 @@ async function authorCase(c, slug = 'search', expectationOptions = {}, request =
   return { task, record: draft };
 }
 
-async function environment(c, target = 'G001') {
-  const record = { schema_version: 1, kind: 'environment', record_id: `ENV-${target}`, campaign_id: c.config.campaign_id, created_at: '2026-09-28T00:00:00.000Z', target_id: target, runtime_type: 'cli', source: { revision: `revision-${target}` }, command: { argv: ['node', 'app.mjs'], cwd: c.project }, readiness: { type: 'process', body_contains: 'ready' }, status: 'READY', logs: { stdout: `environments/${target}/logs/stdout.log`, stderr: `environments/${target}/logs/stderr.log` } };
+async function environment(c, target = 'G001', overrides = {}) {
+  const record = { schema_version: 1, kind: 'environment', record_id: `ENV-${target}`, campaign_id: c.config.campaign_id, created_at: '2026-09-28T00:00:00.000Z', target_id: target, runtime_type: 'cli', source: { revision: `revision-${target}` }, command: { argv: ['node', 'app.mjs'], cwd: c.project }, readiness: { type: 'process', body_contains: 'ready' }, status: 'READY', logs: { stdout: `environments/${target}/logs/stdout.log`, stderr: `environments/${target}/logs/stderr.log` }, ...overrides };
+  record.command = { argv: ['node', 'app.mjs'], cwd: c.project, ...overrides.command };
   record.source = await attestSource(c.campaign, { ...record, source: { ...record.source, provider: { type: 'files', root: c.project, paths: ['fixture-source.mjs'] } } });
   await writeRecord(c.campaign, `environments/${target}/00-environment.record.yaml`, record);
   return record;
@@ -125,10 +126,10 @@ test('audited plans reject cyclic prerequisites and freeze scenario files before
   await assert.rejects(run('task dispatch', { campaign: c.campaign, 'task-id': executor.task_id }), { code: 'SPEC_CHANGED' });
 });
 
-async function prepared(t, expectationOptions = {}, options = {}) {
+async function prepared(t, expectationOptions = {}, { environment: environmentOverrides, ...options } = {}) {
   const c = await campaign(t, options);
   const authored = await authorCase(c, 'search', expectationOptions);
-  await environment(c);
+  await environment(c, 'G001', environmentOverrides);
   const accepted = await acceptPlan(c, [authored]);
   return { ...c, authored, accepted };
 }
@@ -697,4 +698,20 @@ test('accepted records are schema checked, immutable, idempotent, and contained'
   await withController(dir, async () => {
     await assert.rejects(withController(dir, async () => {}), { code: 'CONTROLLER_BUSY' });
   });
+});
+
+test('a mobile executor needs Maestro and Java on this machine only when the device runs here', async t => {
+  const home = await mkdtemp(path.join(tmpdir(), 'agentic-no-runners-'));
+  t.after(() => rm(home, { recursive: true, force: true }));
+  const saved = { HOME: process.env.HOME, PATH: process.env.PATH, JAVA_HOME: process.env.JAVA_HOME, AGENTIC_TESTS_CACHE: process.env.AGENTIC_TESTS_CACHE };
+  process.env.AGENTIC_TESTS_CACHE ||= path.join(saved.HOME, '.cache', 'run-agentic-tests'); // the dependency cache must survive the sandboxed HOME
+  t.after(() => { for (const [key, value] of Object.entries(saved)) value === undefined ? delete process.env[key] : (process.env[key] = value); });
+  const mobile = host => ({ environment: { runtime_type: 'mobile', clients: ['maestro'], command: { argv: ['bash', 'device-session.sh', '--platform', 'ios', '--name', 'agentic-tests-x', '--app-id', 'dev.example.app', '--host', host] } } });
+  const request = { role: 'executor', case_ids: ['T0001'], target_id: 'G001', requested_action: 'Run the flow' };
+  const local = await prepared(t, {}, mobile('local'));
+  process.env.HOME = home; process.env.PATH = '/usr/bin:/bin'; delete process.env.JAVA_HOME;
+  await assert.rejects(createTask(local, request), error => ['RUNNER_CLI_MISSING', 'JAVA_RUNTIME_MISSING'].includes(error.code));
+  const remote = await prepared(t, {}, mobile('some-ssh-alias'));
+  const task = await createTask(remote, request);
+  assert.equal(task.role, 'executor');
 });
