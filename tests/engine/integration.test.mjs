@@ -79,7 +79,7 @@ test('public CLI runs a real HTTP case through independent role records and reje
   const environmentFile = path.join(project, 'environment.yaml');
   await writeFile(environmentFile, YAML.stringify({
     target_id: operator.target_id, task_id: operator.task_id, actor_id: operator.actor_id,
-    runtime_type: 'http', source: { revision: 'fixture-v1', provider: { type: 'files', root: project, paths: ['product.mjs'] } },
+    runtime_type: 'http', clients: ['http'], source: { revision: 'fixture-v1', provider: { type: 'files', root: project, paths: ['product.mjs'] } },
     command: { argv: [process.execPath, runtimeProduct, 'http', String(port)], cwd: project },
     readiness: { type: 'http', url: `${baseUrl}/health`, expected_status: 200, body_contains: 'agentic-fixture', timeout_ms: 3000 },
   }));
