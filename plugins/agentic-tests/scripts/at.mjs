@@ -43,7 +43,9 @@ function run(args, opts = {}) {
   for (let attempt = 0; attempt < 3 && result.status !== 0 && /CONTROLLER_BUSY/.test(errorText(result)); attempt++) { sleep(10000); result = once(args, opts); }
   return result;
 }
+// A count of 0 or a missing one means the notification carried no usage (forked runs): record nothing rather than a false zero.
 const recordCost = (campaign, taskId, tokens, model) => {
+  if (!(Number(tokens) > 0)) return { task_id: taskId, recorded: false, reason: 'no token count' };
   const task = run(['records', '--campaign', campaign, '--kind', 'task', '--format', 'json']).data?.records?.find(t => t.task_id === taskId);
   const entry = { task_id: taskId, role: task?.role || 'unknown', tokens: Number(tokens), model: model || null, at: new Date().toISOString() };
   appendFileSync(path.join(campaign, 'costs.jsonl'), JSON.stringify(entry) + '\n');
@@ -257,7 +259,7 @@ if (command === 'doctor') {
   const result = run(['reconcile', '--campaign', campaign]);
   if (result.status !== 0) failWith('reconcile', result);
   const s = result.data;
-  const costs = existsSync(path.join(campaign, 'costs.jsonl')) ? readFileSync(path.join(campaign, 'costs.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line)) : [];
+  const costs = existsSync(path.join(campaign, 'costs.jsonl')) ? readFileSync(path.join(campaign, 'costs.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line)).filter(c => c.tokens > 0) : [];
   const marker = existsSync(path.join(campaign, '99-teardown.json')) ? JSON.parse(readFileSync(path.join(campaign, '99-teardown.json'), 'utf8')) : null;
   print({
     ok: true, complete: s.complete, outcome: s.outcome, target: s.latest_target_id, counts: s.counts,

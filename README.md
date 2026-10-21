@@ -133,7 +133,7 @@ your main session only runs the controller loop. every agent sets `omitClaudeMd:
 
 ## what's actually been run
 
-live-checked on macos (apple silicon) with real campaigns: web (ego-browser on a remote ssh host, sign-in included), http api (auth matrix, cors, openapi schema), mcp over stdio with a backend behind it, ios simulator, android emulator, the full repair loop (issue → pr → merge → retest), detached and forked runs, kill + resume, teardown. not exercised yet: ego-browser with browser host `local`, and mobile on a *remote* runner host.
+live-checked on macos (apple silicon) with real campaigns: web (ego-browser on a remote ssh host, sign-in included), http api (auth matrix, cors, openapi schema), mcp over stdio with a backend behind it, ios simulator, android emulator, the full repair loop (issue → pr → merge → retest), detached and forked runs, kill + resume, teardown. half-checked: with browser host `local`, the helper scripts (`ego-run.sh`, `pull-evidence.sh local`) ran on a machine whose ego-browser is local, but a full campaign that way hasn't. not run yet: mobile on a *remote* runner host.
 
 ## hacking on it
 

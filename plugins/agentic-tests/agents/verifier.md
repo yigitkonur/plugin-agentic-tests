@@ -36,7 +36,7 @@ Your prompt names your slot. Both slots read the same artifacts independently; n
    - `expected`: the manifest `statement`, copied verbatim, punctuation included.
    - `observed`: what you saw in the artifacts in concrete terms (heading text, URL, field values, status code, error text). Use your own observation, not the executor's wording.
    - `verdict`: `PASS` only when cited artifacts directly prove the statement; `FAIL` when they directly show a mismatch; `INCONCLUSIVE` when evidence is missing, too weak, or contradictory; `NOT_ASSESSED` when the run never reached it.
-   - `evidence_ids` and a one- or two-sentence `reason` that links artifact content to the verdict.
+   - `evidence_ids` and a one- or two-sentence `reason` that links artifact content to the verdict. Cite only evidence whose entry in the execution record lists this expectation in its `expectation_ids`; an artifact assigned elsewhere can be mentioned in the `reason`, not cited.
    A declared capture gap or a `PARTIAL`/`NOT_RUN` observation can never support PASS.
 4. `inspected_evidence`: one entry per artifact you opened: `id`, `sha256` copied exactly from that artifact's entry in the execution record (the CLI re-hashes the file and rejects a mismatch), `method` (for example "Viewed PNG with Read", "Read JSON"), and `observation` (what it shows).
 5. `findings`, one per problem, each with `class`, `summary`, `expectation_ids` and `priority` (the expectation's):

@@ -8,9 +8,9 @@ const port = Number(process.env.PORT || 3000);
 const users = { [process.env.FIXTURE_USER || 'demo@example.test']: { email: process.env.FIXTURE_USER || 'demo@example.test', password: process.env.FIXTURE_PASSWORD || 'demo-pass', orders: ['#1001', '#1002', '#1003'] } };
 const sessions = new Map();
 
-const page = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title} · Fixture Shop</title>
+const page = (title, body, signedIn = false) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title} · Fixture Shop</title>
 <style>body{font-family:system-ui;margin:40px;max-width:640px}label{display:block;margin:12px 0}nav a{margin-right:12px}.error{color:#b00020}</style></head>
-<body><nav><a href="/">Home</a><a href="/login">Sign in</a></nav><main>${body}</main></body></html>`;
+<body><nav><a href="/">Home</a>${signedIn ? '<a href="/dashboard">Dashboard</a>' : '<a href="/login">Sign in</a>'}</nav><main>${body}</main></body></html>`;
 
 export function greeting(user) {
   return `Signed in as ${user.email}`;
@@ -45,7 +45,7 @@ const server = http.createServer((req, res) => {
     const user = sessionUser(req);
     if (!user) return send(303, '', { location: '/login' });
     const orders = user.orders.map(o => `<li>Order ${o}</li>`).join('');
-    return send(200, page('Dashboard', `<h1>Dashboard</h1><p id="greeting">${greeting(user)}</p><h2>Your orders</h2><ul aria-label="Orders">${orders}</ul>`));
+    return send(200, page('Dashboard', `<h1>Dashboard</h1><p id="greeting">${greeting(user)}</p><h2>Your orders</h2><ul aria-label="Orders">${orders}</ul>`, true));
   }
   send(404, page('Not found', '<h1>Not found</h1>'));
 });

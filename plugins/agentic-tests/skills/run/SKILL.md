@@ -71,7 +71,7 @@ Never launch an agent for a task that `launch` or `dispatch` did not report `ok:
 
 When `launch` returns `ok: false` at the `task dispatch` step (`TASK_BLOCKED`, a resource lease or capacity), the task is allocated but waiting. Do not launch an agent for it. After the task holding that resource closes, run `$AT dispatch --campaign "<campaign>" --task-id <task_id>` and then launch and bind as usual.
 
-When a worker's completion notification arrives, read its one line, then close it and record its cost in the same call (`--tokens` is the notification's `subagent_tokens`, `--model` the table's model):
+When a worker's completion notification arrives, read its one line, then close it and record its cost in the same call (`--tokens` is the notification's `subagent_tokens`, `--model` the table's model; leave both out when the notification carries no usage):
 - Self-publishing roles (author, environment operator, planner, executor, diagnostician, ticket writer, implementer, integrator): `$AT close --campaign "<campaign>" --task-id <task_id> --tokens <n> --model <model>`.
 - Reviewers (verifier, plan auditor): `$AT publish --campaign "<campaign>" --task-id <task_id> --tokens <n> --model <model>`. If it returns `ok: false`, send the `issues` and `details` to that same agent with SendMessage and wait for its new line; never edit a draft yourself.
 - A `BLOCKED` or `PARTIAL` line: read the reason. Fix the input with a new task of the same role whose request adds `replaces_task_id: <that task>` (the engine then retires the old task's obligation); otherwise report it. A close or publish that fails because outputs are missing means the worker did not finish; ask it with SendMessage what is missing.

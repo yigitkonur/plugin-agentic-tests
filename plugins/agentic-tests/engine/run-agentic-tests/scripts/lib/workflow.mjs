@@ -754,7 +754,7 @@ async function validateVerification(state, task, record) {
     const expected = round.spec.expectations.find(item => item.id === review.expectation_id);
     if (review.expected !== expected.statement) fail('EXPECTATION_CHANGED', 'Copy the frozen expectation statement without redefining it.');
     if (new Set(review.evidence_ids).size !== review.evidence_ids.length) fail('INVALID_EVIDENCE', 'Review evidence IDs must be unique.');
-    const attached = review.evidence_ids.map(id => execution.evidence.find(item => item.id === id && item.expectation_ids.includes(expected.id)) || fail('INVALID_EVIDENCE', `Review cites unknown evidence ${id}.`));
+    const attached = review.evidence_ids.map(id => execution.evidence.find(item => item.id === id && item.expectation_ids.includes(expected.id)) || fail('INVALID_EVIDENCE', execution.evidence.some(item => item.id === id) ? `Review of ${expected.id} cites ${id}, which the execution record does not assign to ${expected.id}; cite it under an expectation it proves, or mention it in the reason.` : `Review cites unknown evidence ${id}.`));
     if (attached.some(evidence => !record.inspected_evidence.some(item => item.id === evidence.id && item.sha256 === evidence.sha256))) fail('UNINSPECTED_EVIDENCE', 'Every cited artifact needs an explicit inspection with its hash, method, and observation.');
     if (['PASS', 'FAIL'].includes(review.verdict) && !attached.length) fail('UNINSPECTED_EVIDENCE', 'PASS or FAIL needs inspected supporting artifacts; otherwise report INCONCLUSIVE or NOT_ASSESSED.');
     if (review.verdict === 'PASS') {
