@@ -33,7 +33,7 @@ The engine fingerprints the project's source at start and re-checks it at every 
 
 ## Facts about the browser host
 
-The browser runs on a remote host (default `tugce`) and reaches this machine's local servers only through forwarded ports. Allowed ports: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000. Use the port the assignment names; if it names none, pick the first allowed port that is free locally. The whole campaign uses one `EGO_FORWARD_PORTS` value, given in the assignment.
+The assignment names the browser host. With `local`, the browser runs on this machine and reaches any local port. With an ssh alias (for example `tugce`), the browser runs on that host and reaches this machine's servers only through the ports the `ego-browser` wrapper forwards (the reference wrapper: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000). Use the port the assignment names; if it names none, pick the first of those ports that is free locally. The whole campaign uses one `EGO_FORWARD_PORTS` value, given in the assignment (none for `local`).
 
 ## Procedure
 
@@ -59,7 +59,7 @@ The browser runs on a remote host (default `tugce`) and reaches this machine's l
 7. Prove the real client reaches it, through the helper (it applies the 90-second limit and reports tunnel errors):
 
    ```bash
-   export EGO_FORWARD_PORTS="<ports>"
+   export EGO_FORWARD_PORTS="<ports>"   # remote browser host only; omit for local
    "$HELPERS/ego-run.sh" --timeout 90 --log "/tmp/agentic-tests-<task_id>-ego.log" <<'EOF'
    const task = await taskSpace("<task_id> readiness");
    const page = task.page("p1");

@@ -4,6 +4,7 @@
 # android: drives ANDROID_APP_ID (default com.android.settings, a system app) on an emulator; set ANDROID_APK=<path> to install an .apk.
 # The project contains .claude/agentic-tests.local.md (git-ignored), so
 # `claude -p --plugin-dir … '/agentic-tests:run …'` run from that directory needs no /agentic-tests:setup.
+# BROWSER_HOST=<ssh alias> when ego-browser here is an ssh wrapper (the author's setup uses BROWSER_HOST=tugce).
 # defect: web app with one deliberate bug, pushed to a private GitHub repo (needs `gh` authenticated).
 set -euo pipefail
 kind=${1:?web|api|mcp|mobile|android|defect}; dir=${2:?target dir}; port=${3:-}
@@ -17,7 +18,7 @@ base_url: ${3:-null}
 start_command: ${9:-null}
 port: ${2:-null}
 forward_ports: ${10:-null}
-browser_host: tugce
+browser_host: ${BROWSER_HOST:-local}
 accounts: ${ACCOUNTS:-[FIXTURE_USER, FIXTURE_PASSWORD]}
 review: default
 host_capacity: 6

@@ -48,6 +48,6 @@ claude --plugin-dir plugins/agentic-tests --plugin-dir plugins/agentic-tests-web
 
 ## Live checks
 
-`scripts/live-project.sh <web|api|mcp|mobile|defect> <dir> [port]` builds a throwaway Git project from a fixture with its settings file; `scripts/run-stats.mjs <run.jsonl>` splits a headless run's tokens between the main session and workers. Run headless sessions with the account variables exported (`FIXTURE_USER`, `FIXTURE_PASSWORD`) and, for `--detach`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`.
+`scripts/live-project.sh <web|api|mcp|mobile|android|defect> <dir> [port]` (set `BROWSER_HOST=<ssh alias>` when ego-browser here is an ssh wrapper; the author's machine uses `BROWSER_HOST=tugce`) builds a throwaway Git project from a fixture with its settings file; `scripts/run-stats.mjs <run.jsonl>` splits a headless run's tokens between the main session and workers. Run headless sessions with the account variables exported (`FIXTURE_USER`, `FIXTURE_PASSWORD`) and, for `--detach`, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`.
 
 Changes to agents, skills or the controller are verified by running a real campaign against a fixture, not by unit tests: copy `fixtures/web-app` to a temporary Git repo, start a headless session with the plugins, run `/agentic-tests:run`, and read the campaign's `status`, evidence and report.

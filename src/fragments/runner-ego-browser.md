@@ -3,7 +3,7 @@
 `ego-browser` is your only browser. Never import Playwright or start another browser. This card is the whole API you may use; for one unfamiliar method call `help("<name>")` inside a script, or grep `<Helpers>/../runners/ego-browser/references/api.md` for that method (never read that file whole).
 
 **How it runs here**
-- `ego-browser` on this machine is an ssh wrapper. Your script runs in Node.js on the remote browser host (default `tugce`) next to the real browser. So: `page.screenshot({ path })` writes to the remote disk (absolute path under `/tmp/agentic-tests/<campaign_id>/<task_id>/`), your shell's environment variables do not exist in the script, and local files are not visible to it.
+- The assignment names the browser host. `local` means `ego-browser` drives a browser on this machine. An ssh alias (for example `tugce`) means the `ego-browser` command here is an ssh wrapper: your script runs in Node.js on that host, next to the real browser. Either way, write screenshots to an absolute path under `/tmp/agentic-tests/<campaign_id>/<task_id>/` and bring them into the evidence folder with `pull-evidence.sh <browser host> …` (for `local` it copies). Your shell's environment variables never reach the script, and with a remote host local files are not visible to it.
 - Always run scripts through the helper, never `ego-browser` directly:
 
   ```bash
@@ -17,7 +17,7 @@
   ```
 
   The helper returns the script's own output (stdout and stderr merged), keeps the wrapper's `[ego-browser…]` lines in the log, retries a "preview setup is busy" answer, and exits 7 with the wrapper's message when the tunnel failed (record that as an execution gap, with the message). Any other non-zero exit is the script's own failure: read the error text in its output.
-- A local app is reachable from the browser host only through forwarded ports: export the exact `EGO_FORWARD_PORTS` value the assignment gives before each helper call (`export EGO_FORWARD_PORTS="3000 8000"`). Only these ports exist: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000. Never add, change or guess ports; every worker in a campaign uses the identical value. A public URL needs no forwarding: leave the variable unset. Unset means "no local app is reachable".
+- Remote browser host only: a local app is reachable from it only through forwarded ports. Export the exact `EGO_FORWARD_PORTS` value the assignment gives before each helper call (`export EGO_FORWARD_PORTS="3000 8000"`); the wrapper accepts only the ports it was built for (the reference wrapper: 3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000). Never add, change or guess ports; every worker in a campaign uses the identical value. With browser host `local` or a public URL, leave the variable unset.
 - Credentials: `--env NAME1,NAME2` makes `ENV.NAME1` and `ENV.NAME2` available in your script (values travel on stdin only). Use `await page.fill("loc=role:textbox[name='Email']", ENV.FIXTURE_USER)`. Never print, log, screenshot, save or write `ENV` values anywhere; never type a secret's literal value into a script or a command.
 - Each Bash call is a fresh shell: start every call with the assignments you need (`EV=…`, `HELPERS=…`, `export EGO_FORWARD_PORTS=…`).
 - If the final output contains `[ego-browser:notice]` ignore it; never run `ego-browser upgrade`.

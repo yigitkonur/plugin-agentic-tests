@@ -1,34 +1,66 @@
 # agentic-tests
 
-Agentic end-to-end testing for Claude Code. You describe user journeys; model-pinned expert agents author the cases, start or attach the app, plan and audit, drive the real interface (browser, HTTP, MCP, mobile device), and independent reviewers judge the saved evidence. You get verdicts per case, an HTML report, and, on request, a repair loop that diagnoses, files an issue, fixes in a worktree, merges and retests.
+e2e testing for claude code that doesn't grade its own homework.
 
-## Plugins
+you describe user journeys in plain words. a crew of model-pinned agents writes the test cases, boots (or attaches to) your app, plans and audits the run, drives the real thing (browser, http api, mcp server, ios / android app), and then *separate* reviewers judge the saved receipts: screenshots, snapshots, responses, junit. you get a verdict per case, an html report, and if you want it, a repair loop that diagnoses the bug, files an issue, fixes it in a worktree, merges and retests.
 
-| Plugin | What it adds | Install when the project has |
-|---|---|---|
-| `agentic-tests` | Engine, `/agentic-tests:run`, `/agentic-tests:run-forked`, `/agentic-tests:setup`, planner, plan auditor, verifier, diagnostician, ticket writer, implementer, integrator, orchestrator | always |
-| `agentic-tests-web` | author, environment operator and executor driving a real browser through ego-browser | a web UI |
-| `agentic-tests-api` | author, environment operator and executor using curl and OpenAPI schema checks | an HTTP API or a backend such as Supabase |
-| `agentic-tests-mcp` | author, environment operator and executor driving mcpc 0.7 sessions | an MCP server |
-| `agentic-tests-mobile` | author, environment operator and executor using Maestro (CLI and MCP) on iOS simulators and Android emulators, plus the web executor | a mobile app |
+tl;dr: no vibes-based "looks good to me". every pass has evidence, and the agent that ran the test never gets to say it passed.
 
-Domain plugins co-install: a web app with an API gets `web` and `api`; an MCP server with a backend gets `mcp` and `api`.
+## install
 
-## Install
+you need [claude code](https://claude.com/claude-code). from a terminal in your project, the one-liner:
+
+```bash
+claude plugin install agentic-tests-web --marketplace yigitkonur/plugin-agentic-tests --scope project
+```
+
+that adds the marketplace and installs the web plugin, and the core plugin (`agentic-tests`) comes along as a dependency. swap `-web` for whatever your project needs, or stack them:
+
+```bash
+claude plugin marketplace add yigitkonur/plugin-agentic-tests --scope project
+claude plugin install agentic-tests-web@agentic-tests --scope project
+claude plugin install agentic-tests-api@agentic-tests --scope project
+claude plugin install agentic-tests-mcp@agentic-tests --scope project
+claude plugin install agentic-tests-mobile@agentic-tests --scope project
+```
+
+already inside a claude code session? same thing with slash commands:
 
 ```text
 /plugin marketplace add yigitkonur/plugin-agentic-tests
-/plugin install agentic-tests@agentic-tests --scope project
 /plugin install agentic-tests-web@agentic-tests --scope project
 ```
 
-Install per project (`--scope project`): agent descriptions cost a few hundred tokens in every session where a plugin is enabled, so enable only the domains a project needs.
+restart the session after installing so the agents load. later updates: `claude plugin marketplace update agentic-tests`.
 
-Requirements: Node.js 22+ with npm (the first `doctor` run installs the engine's two locked dependencies, once), and `timeout` (`brew install coreutils` on a stock Mac). The runner programs: the `ego-browser` CLI for web, `mcpc` 0.7.x for MCP, Maestro 2.10+ with Java 17+ for mobile (found automatically under Homebrew or `JAVA_HOME`), Xcode for iOS. For Android, `android-setup.sh` installs the SDK and a system image on a Mac by itself. The repair loop needs the project's GitHub remote and an authenticated `gh`.
+install per project (`--scope project`), not globally. every enabled plugin puts its agent names in the context of every session (the core is ~780 tokens, each domain ~225), so only turn on what a project actually uses.
 
-**No other skills are needed.** The runner documentation (`ego-browser`, `test-by-mcpc-cli`, `test-by-maestro`) is vendored in `plugins/agentic-tests/runners/` (see `VENDORED.md`) and the part each agent needs is baked into its prompt. Refresh it with `scripts/vendor-runners.sh` after the source skills change.
+## which plugins
 
-## Use
+| plugin | what you get | grab it when the project has |
+|---|---|---|
+| `agentic-tests` | the engine, `/agentic-tests:run`, `/agentic-tests:run-forked`, `/agentic-tests:setup`, plus planner, plan auditor, verifier, diagnostician, ticket writer, implementer, integrator, orchestrator | always (auto-installed as a dependency) |
+| `agentic-tests-web` | author, environment operator and executor that drive a real browser through ego-browser | a web ui |
+| `agentic-tests-api` | author, environment operator and executor using curl and openapi schema checks | an http api, or a backend like supabase |
+| `agentic-tests-mcp` | author, environment operator and executor that drive mcpc 0.7 sessions | an mcp server |
+| `agentic-tests-mobile` | author, environment operator and executor using maestro (cli + mcp) on ios simulators and android emulators, plus the web executor | a mobile app |
+
+they stack: web app with an api → `web` + `api`. mcp server with a backend behind it → `mcp` + `api`.
+
+## what you need on the machine
+
+- node 22+ with npm. the first `doctor` run installs the engine's two pinned deps (`yaml`, `ajv`) into `~/.cache/run-agentic-tests`, once.
+- `timeout` (on a stock mac: `brew install coreutils`).
+- the runner for each domain you test:
+  - web: the [`ego-browser`](https://github.com/citrolabs/ego-lite) cli. it can run the browser on this machine (browser host `local`), or be an ssh wrapper to another machine (browser host = that ssh alias).
+  - api: `curl`. that's it.
+  - mcp: [`mcpc`](https://github.com/apify/mcpc) 0.7.x.
+  - mobile: [maestro](https://maestro.dev) 2.10+ and java 17+ (found by itself under homebrew or `JAVA_HOME`), plus xcode for ios. for android, `scripts/android-setup.sh` installs the sdk, emulator and a system image on a mac for you.
+- the repair loop needs a github remote and a logged-in `gh`.
+
+no other skills required, fr. the docs for ego-browser, mcpc and maestro ship inside the plugin (`plugins/agentic-tests/runners/`, see `VENDORED.md`), and the bits each agent needs are baked straight into its prompt.
+
+## use it
 
 ```text
 /agentic-tests:setup
@@ -36,68 +68,77 @@ Requirements: Node.js 22+ with npm (the first `doctor` run installs the engine's
 /agentic-tests:run http://127.0.0.1:3000 "checkout with a saved card" --track campaign
 /agentic-tests:run mcp:mcp.json:app "tools match mcp-surface.json; create_order rejects qty 200" --detach
 /agentic-tests:run app:com.example.app "add a note; empty note shows an error"
+/agentic-tests:run --resume
 ```
 
-`setup` detects domains, start command, ports, account variable names and (for mobile) the runner host, and writes `.claude/agentic-tests.local.md`. `run` reads it.
+`setup` sniffs out your domains, start command, port, test-account variable names, browser host and (for mobile) which machine runs the device, then writes `.claude/agentic-tests.local.md`. `run` reads it. journeys are split on `;`.
 
-## How a campaign runs
+export your test-account variables (say `FIXTURE_USER`, `FIXTURE_PASSWORD`) in the shell *before* you start claude code. the engine fingerprints them into every target, and values never land in any file.
 
-1. **Authors** (one per journey) write each case: Gherkin steps, a frozen expectation manifest with sources, and a recipe for the executor.
-2. The **environment operator** starts the app as an engine-owned runtime, or attaches to one that is already running, and proves the real client reaches it.
-3. The **planner** maps journeys to cases, dependencies and shared-resource claims; an independent **plan auditor** approves or sends precise corrections back to the authors or planner.
-4. **Executors** run each case through the real interface and save evidence: screenshots, snapshots, console output, HTTP exchanges, MCP results, JUnit reports.
-5. **Verifiers** (two blind ones for auth, payment and integrity expectations) judge the saved evidence. They have no shell: they cannot rerun, click or repair anything.
-6. A **closure audit** checks the recorded proof; the run ends with a report.
-7. With `--track campaign`, verified failures go to a **diagnostician**, then a **ticket writer** (GitHub issue), an **implementer** (worktree fix and PR), an **integrator** (merge, new target) and a fresh retest.
+## how a run goes down
 
-The engine (`plugins/agentic-tests/engine`) enforces the rules mechanically: every worker is a distinct agent, an author never executes its own case, a verifier never reviews its own run, accepted submissions are not passes, and evidence hashes are checked.
+1. **authors** (one per journey) write the case: gherkin steps, a frozen list of expectations with a source for each, and a recipe the executor follows.
+2. the **environment operator** starts your app as an engine-owned runtime, or attaches to the one you already have running, and proves the real client can reach it.
+3. the **planner** maps journeys to cases, dependencies and shared resources. an independent **plan auditor** approves it or bounces precise fixes back.
+4. **executors** run each case against the real interface and save the receipts.
+5. **verifiers** judge only those receipts. critical stuff (auth, payments, data integrity) gets two blind reviewers. they have no shell, so they literally can't rerun, click or patch anything.
+6. a **closure audit** checks the recorded proof, you get the report, and `teardown` cleans up after itself.
+7. with `--track campaign`, a verified failure goes to a **diagnostician** → **ticket writer** (github issue) → **implementer** (worktree fix + pr) → **integrator** (merge, new target) → fresh retest. it asks before merging into your default branch.
 
-## Models
+the engine (`plugins/agentic-tests/engine`) enforces the rules mechanically, so they can't be "interpreted": every worker is a distinct agent, nobody reviews their own work, an accepted submission is not a pass, and evidence hashes get re-checked.
 
-| Role | Model | Effort | Tools |
+## models
+
+| role | model | effort | tools |
 |---|---|---|---|
-| author (web, api, mcp, mobile) | Sonnet | medium | shell, files |
-| environment operator (web, api, mcp) | Haiku | high | shell, files |
-| environment operator (mobile) | Sonnet | low | shell, files |
-| executor (web, mcp, mobile) | Sonnet | low | shell, files (+ Maestro MCP) |
-| executor (api) | Haiku | high | shell, files |
-| planner | Sonnet | medium | shell, files |
-| plan auditor | Sonnet | high | files only |
-| verifier | Sonnet | medium | files only |
-| diagnostician | Sonnet | high | shell (read-only use), files |
-| ticket writer | Haiku | high | shell, files |
-| implementer, integrator | Sonnet | medium | full / shell, files |
-| orchestrator (detached runs) | Sonnet | high | Agent, shell, files |
+| author (web, api, mcp, mobile) | sonnet | medium | shell, files |
+| environment operator (web, api, mcp) | haiku | high | shell, files |
+| environment operator (mobile) | sonnet | low | shell, files |
+| executor (web, mcp, mobile) | sonnet | low | shell, files (+ maestro mcp) |
+| executor (api) | haiku | high | shell, files |
+| planner | sonnet | medium | shell, files |
+| plan auditor | sonnet | high | files only |
+| verifier | sonnet | medium | files only |
+| diagnostician | sonnet | high | shell (read-only use), files |
+| ticket writer | haiku | high | shell, files |
+| implementer, integrator | sonnet | medium | full / shell, files |
+| orchestrator (detached runs) | sonnet | high | agent, shell, files |
 
-Your main session's model only runs the controller loop. Every agent sets `omitClaudeMd: true` and carries its own safety rules, so your global instructions are not re-read by every worker.
+your main session only runs the controller loop. every agent sets `omitClaudeMd: true` and carries its own safety rules, so your personal claude.md isn't re-read by thirty workers.
 
-## Choosing how to run
+## pick a mode
 
-| Situation | Mode | Why |
+| situation | mode | why |
 |---|---|---|
-| A few journeys, you are watching, questions likely | `/agentic-tests:run …` (inline) | Questions reach you directly; about three short tool calls per task in your session |
-| A suite of six or more cases, or a repair loop you do not need to steer | `--detach` | A Sonnet orchestrator runs in the background; your session receives one report, and questions arrive as messages |
-| You want to wait for the result but keep your context clean | `/agentic-tests:run-forked …` | The same Sonnet orchestrator runs in a forked context; your turn waits and only the final report enters your context. Questions are collected into the report, because a waiting session cannot answer them |
+| a few journeys, you're watching, questions likely | `/agentic-tests:run …` (inline) | questions hit you directly; your session makes a handful of short tool calls per task |
+| six-plus cases, or a repair loop you don't need to babysit | `--detach` | a sonnet orchestrator runs in the background; you get one report, and any questions show up as messages |
+| you want to wait for it but keep your context clean | `/agentic-tests:run-forked …` | same orchestrator in a forked context; only the final report lands in your session. questions get collected into the report, since a waiting session can't answer |
 
-### Things to know
+## stuff to know (read this, it'll save you a headache)
 
-- **Export the test-account variables before starting Claude Code.** The engine hashes the declared account variables into each target's configuration digest, so a session started without them reports `SOURCE_CHANGED` for a target that was started with them.
-- **Detached runs in headless mode.** `claude -p` stops background agents ten minutes after its last turn. For `--detach` in a headless run, set `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`. Interactive sessions are not affected.
-- **Do not edit the project while a campaign runs.** The engine fingerprints the project's files (tracked and untracked) and re-checks them at every step; an edit invalidates the proof. Files the service itself writes (a JSON or SQLite store) are added to `.git/info/exclude` by the environment operator, so they do not count.
-- **Teardown and resume.** A finished run ends with `at.mjs teardown`: it stops the campaign's own dev servers, mcpc sessions and devices, removes successor worktrees and the simulators or emulators it created, and keeps the report server running. The engine judges proof against a READY runtime, so after teardown `complete` reads false; `state` then shows the result recorded at teardown under `torn_down`. An interrupted run is continued with `/agentic-tests:run --resume`: it interrupts the lost workers, replaces them, and re-checks the runtimes.
-- **Finish or tear down a campaign before `/plugin update`.** The engine ties a running runtime to the installed copy that started it (its ownership handle); another version's copy reports `PROCESS_OWNERSHIP_MISMATCH` when it tries to stop or resume it. Use the same installed version for `--resume` and `teardown`.
-- **A project must have the plugins installed** (`/plugin install … --scope project`); copying another project's `.claude/settings.json` only declares them, and a headless session then treats `/agentic-tests:run` as plain text.
-- **Forwarded ports.** The browser host reaches this machine only on fifteen ports (`3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000`). The run fixes one set at the start, covering the web port and every local backend, and never changes it.
-- **MCP server secrets.** A stdio server does not inherit your environment; the operator passes the variables it reads as `${NAME}` references in a derived config, and mcpc stores the resolved values in its session state while the campaign runs. `teardown` (or `at.mjs scrub`) blanks them in the campaign's `owner.json`; the campaign folder is mode 700 and git-ignored. Delete a campaign folder only after `teardown`: deleting it first orphans its mcpc bridge.
-- **Secrets reach the browser through stdin.** `scripts/ego-run.sh --env NAME` gives a script `ENV.NAME` on the browser host; the value is never on a command line, in a file or in a transcript.
-- **Permissions.** The agents run in the background and cannot answer permission prompts. Use a trusted project with `bypassPermissions`, or allow the tools they need (`/agentic-tests:setup` prints the rules).
-- **Usage limits.** A campaign spends roughly 1 to 4 million tokens (mostly cached reads), about 1.5 to 4 dollars of list price for a three-journey run. Detached mode keeps your own session at a few thousand tokens; inline mode pays about one short tool call per task in your session.
-- **The repair loop never touches your checkout.** The integrator merges on GitHub; the new target is built from an isolated worktree at the merge commit under `.agentic-test-worktrees/` next to the project.
+- **don't edit the project mid-run.** the engine fingerprints tracked and untracked files and re-checks them at every step; an edit invalidates the proof. files your app writes on its own (a json or sqlite store, logs) get added to `.git/info/exclude` by the operator, so they don't count.
+- **teardown + resume.** a finished run ends with `teardown`: it stops the campaign's dev servers, mcpc sessions and devices, removes its worktrees and the simulators / emulators it created, and keeps the report server up. after teardown `state` says `complete: false` (proof is judged against a live target) and shows the real result under `torn_down`. got interrupted? `/agentic-tests:run --resume` replaces the lost workers and re-checks the runtimes.
+- **finish or tear down before `/plugin update`.** a runtime is tied to the installed version that started it; a different version gets `PROCESS_OWNERSHIP_MISMATCH` when it tries to stop or resume it.
+- **install in each project.** copying another project's `.claude/settings.json` only *declares* the plugins; run the install command there.
+- **remote browser host? ports are fixed.** with an ssh-wrapper ego-browser, the browser reaches your machine only on the ports the wrapper forwards (the reference wrapper: `3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000`). the run picks one set at the start (web port + every local backend) and never changes it. with `local`, none of this applies.
+- **secrets stay out of files.** browser scripts get credentials as `ENV.NAME` through stdin (`ego-run.sh --env NAME`), never on a command line or on disk. mcpc stores a stdio server's resolved env in its session state while the run is live; `teardown` (or `at.mjs scrub`) blanks it. delete a campaign folder only *after* teardown, or you orphan its mcpc bridge.
+- **permissions.** the agents run in the background and can't answer permission prompts. use a trusted project with `bypassPermissions`, or allow the tools `/agentic-tests:setup` lists.
+- **headless + `--detach`.** `claude -p` kills background agents ten minutes after its last turn; set `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`. interactive sessions are fine.
+- **what it costs.** a three-journey run is roughly 1–4m tokens (mostly cached reads), around $1–5 at list price.
+- **the repair loop never touches your checkout.** it merges on github and builds the new target from an isolated worktree under `.agentic-test-worktrees/` next to your project.
 
-## Mobile runner hosts
+## mobile runner hosts
 
-`select-mac.sh` probes this machine and every host in `~/.ssh/config` (alphabetically, read-only). iOS runs on this machine when it is a Mac with Xcode, Maestro, Java and a simulator, otherwise on the first such Mac. Android runs on the first host that can run an emulator under Maestro (`adb`, `emulator`, Maestro, Java 17+); when none can, on the iOS Mac after `android-setup.sh` has installed the SDK there. The environment operator creates its own `agentic-tests-…` simulator or AVD, pins the emulator to a port it chose, never addresses another device, and removes what it created at teardown. `maestro-run.sh` runs a flow on the right host and brings every artifact back.
+`select-mac.sh` probes this machine and every host in `~/.ssh/config` (alphabetically, read-only). ios runs here if this is a mac with xcode, maestro, java and a simulator, otherwise on the first mac that is. android runs on the first host that can run an emulator under maestro (`adb`, `emulator`, maestro, java 17+); if none can, it goes to the ios mac after `android-setup.sh` installs the sdk there. the operator creates its own `agentic-tests-…` simulator or avd, pins the emulator to a port it picked, never touches anyone else's devices, and deletes what it created at teardown. `maestro-run.sh` runs a flow on the right host and pulls every artifact back.
 
-## Development
+## what's actually been run
 
-See `AGENTS.md`. Agents are generated from `src/`; run `node scripts/build.mjs && node scripts/validate.mjs` after editing. The engine suite is `node --test tests/engine/*.test.mjs`.
+live-checked on macos (apple silicon) with real campaigns: web (ego-browser on a remote ssh host, sign-in included), http api (auth matrix, cors, openapi schema), mcp over stdio with a backend behind it, ios simulator, android emulator, the full repair loop (issue → pr → merge → retest), detached and forked runs, kill + resume, teardown. not exercised yet: ego-browser with browser host `local`, and mobile on a *remote* runner host.
+
+## hacking on it
+
+see `AGENTS.md`. agents are generated from `src/`; after edits run `node scripts/build.mjs && node scripts/validate.mjs`. engine tests: `node --test tests/engine/*.test.mjs`. live checks: `scripts/live-project.sh <web|api|mcp|mobile|android|defect> <dir>` spins up a throwaway project from a fixture.
+
+## license
+
+mit. `plugins/agentic-tests/runners/ego-browser/` is docs from [citrolabs/ego-lite](https://github.com/citrolabs/ego-lite), mit, copyright citrolabs (full text in `plugins/agentic-tests/runners/LICENSE-ego-lite`).

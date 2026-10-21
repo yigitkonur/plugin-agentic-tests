@@ -22,7 +22,7 @@ copy test-by-maestro SKILL.md references
   echo
   echo "| Runner | Upstream | Source skill |"
   echo "|---|---|---|"
-  echo "| ego-browser | https://github.com/citrolabs/ego-lite (third party; check its license before this repository is made public) | ~/.agents/skills/ego-browser |"
+  echo "| ego-browser | https://github.com/citrolabs/ego-lite (MIT, Copyright (c) 2026 CitroLabs; full text in LICENSE-ego-lite) | ~/.agents/skills/ego-browser |"
   echo "| test-by-mcpc-cli | https://github.com/yigitkonur/skills-by-yigitkonur/tree/main/skills/test-by-mcpc-cli | ~/.agents/skills/test-by-mcpc-cli |"
   echo "| test-by-maestro | https://github.com/yigitkonur/skills-by-yigitkonur/tree/main/skills/test-by-maestro | ~/.agents/skills/test-by-maestro |"
   echo

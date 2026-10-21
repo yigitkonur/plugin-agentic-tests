@@ -1,10 +1,10 @@
 # Vendored runner documentation
 
-Copied from the author's skills by scripts/vendor-runners.sh on 2026-10-19. Do not edit here; edit the source skill, run the script, then rebuild (node scripts/build.mjs).
+Copied from the author's skills by scripts/vendor-runners.sh on 2026-10-21. Do not edit here; edit the source skill, run the script, then rebuild (node scripts/build.mjs).
 
 | Runner | Upstream | Source skill |
 |---|---|---|
-| ego-browser | https://github.com/citrolabs/ego-lite (third party; check its license before this repository is made public) | ~/.agents/skills/ego-browser |
+| ego-browser | https://github.com/citrolabs/ego-lite (MIT, Copyright (c) 2026 CitroLabs; full text in LICENSE-ego-lite) | ~/.agents/skills/ego-browser |
 | test-by-mcpc-cli | https://github.com/yigitkonur/skills-by-yigitkonur/tree/main/skills/test-by-mcpc-cli | ~/.agents/skills/test-by-mcpc-cli |
 | test-by-maestro | https://github.com/yigitkonur/skills-by-yigitkonur/tree/main/skills/test-by-maestro | ~/.agents/skills/test-by-maestro |
 
