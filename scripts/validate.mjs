@@ -2,6 +2,7 @@
 // Structural checks for the marketplace, run in CI next to `node scripts/build.mjs --check`.
 // - every plugin has a manifest whose name matches its folder and whose version equals VERSION
 // - the marketplace lists exactly the plugins on disk, with the same version
+// - the Codex marketplace and .codex-plugin manifests match too, and their skills are manual-only
 // - agents have name, description (at most 60 words), model and no unresolved template markers
 // - skills are manual-only (disable-model-invocation: true)
 // - helper scripts named in agents and skills exist and are executable
@@ -30,6 +31,29 @@ for (const name of plugins) {
   }
 }
 for (const name of listed.keys()) if (!plugins.includes(name)) errors.push(`marketplace lists ${name}, which has no plugin folder`);
+
+// Codex: its marketplace lists the plugins that carry a .codex-plugin manifest (only the core today),
+// at the same version, with manual-only skills (agents/openai.yaml allow_implicit_invocation: false).
+const codexMarketplace = JSON.parse(readFileSync(path.join(root, '.agents', 'plugins', 'marketplace.json'), 'utf8'));
+if (codexMarketplace.name !== marketplace.name) errors.push(`codex marketplace name ${codexMarketplace.name} != ${marketplace.name}`);
+for (const entry of codexMarketplace.plugins) {
+  const where = `codex marketplace ${entry.name}`;
+  if (entry.source?.source !== 'local' || entry.source?.path !== `./plugins/${entry.name}`) errors.push(`${where}: source ${JSON.stringify(entry.source)}`);
+  if (!entry.policy?.installation || !entry.policy?.authentication || !entry.category) errors.push(`${where}: needs policy.installation, policy.authentication and category`);
+  const manifestPath = path.join(root, 'plugins', entry.name, '.codex-plugin', 'plugin.json');
+  if (!existsSync(manifestPath)) { errors.push(`${where}: no .codex-plugin/plugin.json`); continue; }
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  if (manifest.name !== entry.name) errors.push(`plugins/${entry.name}/.codex-plugin: name ${manifest.name}`);
+  if (manifest.version !== version) errors.push(`plugins/${entry.name}/.codex-plugin: version ${manifest.version} != VERSION ${version}`);
+  const skills = path.join(root, 'plugins', entry.name, manifest.skills || '');
+  if (!manifest.skills || !existsSync(skills)) { errors.push(`plugins/${entry.name}/.codex-plugin: skills ${manifest.skills} missing`); continue; }
+  for (const skill of readdirSync(skills)) {
+    const relative = path.relative(root, path.join(skills, skill));
+    if (frontmatter(readFileSync(path.join(skills, skill, 'SKILL.md'), 'utf8')).name !== skill) errors.push(`${relative}/SKILL.md: name does not match folder`);
+    const policy = path.join(skills, skill, 'agents', 'openai.yaml');
+    if (!existsSync(policy) || !/allow_implicit_invocation:\s*false/.test(readFileSync(policy, 'utf8'))) errors.push(`${relative}: must be manual-only (agents/openai.yaml allow_implicit_invocation: false)`);
+  }
+}
 
 const helpers = path.join(root, 'plugins', 'agentic-tests', 'scripts');
 const checkHelpers = (file, text) => {

@@ -1,0 +1,23 @@
+{
+  "name": "agentic-tests",
+  "version": "0.3.0",
+  "description": "Agentic E2E test campaigns for web apps, HTTP APIs, MCP servers and mobile apps: the run skill drives fresh Codex subagents for authoring, planning, plan audit, execution, blind evidence review and repair over a bundled engine, and ends with an HTML report.",
+  "author": {
+    "name": "Yigit Konur",
+    "url": "https://github.com/yigitkonur"
+  },
+  "homepage": "https://github.com/yigitkonur/plugin-agentic-tests",
+  "repository": "https://github.com/yigitkonur/plugin-agentic-tests",
+  "license": "MIT",
+  "keywords": ["testing", "e2e", "agents", "qa", "verification", "web", "api", "mcp", "mobile"],
+  "interface": {
+    "displayName": "agentic-tests",
+    "shortDescription": "Agentic E2E test campaigns with blind evidence review",
+    "longDescription": "Run an end-to-end test campaign against a web app (ego-browser), an HTTP API (curl, OpenAPI), an MCP server (mcpc) or a mobile app (Maestro). Every role is a fresh subagent: scenario authors, an environment operator, a planner and plan auditor, executors that save evidence, and verifiers that judge that evidence blind. The engine keeps the records, and the run ends with an HTML report; the campaign track also diagnoses, files and fixes product defects.",
+    "developerName": "Yigit Konur",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "websiteURL": "https://github.com/yigitkonur/plugin-agentic-tests"
+  },
+  "skills": "./codex/skills/"
+}

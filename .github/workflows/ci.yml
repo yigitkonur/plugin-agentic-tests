@@ -27,7 +27,7 @@ jobs:
       - name: Marketplace, manifests, agents and skills
         run: node scripts/validate.mjs
       - name: Shell helpers parse
-        run: for f in plugins/*/scripts/*.sh fixtures/mobile-app/build.sh; do bash -n "$f"; done
+        run: for f in plugins/*/scripts/*.sh scripts/*.sh fixtures/mobile-app/build.sh; do bash -n "$f"; done
 
   engine:
     runs-on: ubuntu-latest

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Render src/agents/*.md into each plugin's agents/ directory.
+// Render src/agents/*.md into each plugin's agents/ directory, and the role text without
+// frontmatter into plugins/agentic-tests/codex/roles/ for Codex workers.
 // - `{{> name}}` is replaced with src/fragments/<name>.md.
 // - The build-only frontmatter key `plugins: [a, b]` lists the target plugins and is removed.
 // - Shared helper scripts live once in the core plugin; nothing is copied.
@@ -28,20 +29,29 @@ for (const file of readdirSync(path.join(root, 'src/agents')).filter(f => f.ends
     return fragments[name];
   });
   if (/\{\{/.test(body)) throw new Error(`${file}: unresolved template marker`);
-  const rendered = `---\n${frontmatter}\n---\n<!-- Generated from src/agents/${file} by scripts/build.mjs. Edit the source, then run node scripts/build.mjs. -->\n${body}`;
+  const generated = `<!-- Generated from src/agents/${file} by scripts/build.mjs. Edit the source, then run node scripts/build.mjs. -->`;
+  const rendered = `---\n${frontmatter}\n---\n${generated}\n${body}`;
   for (const plugin of plugins) {
     if (!existsSync(path.join(root, 'plugins', plugin))) throw new Error(`${file}: unknown plugin ${plugin}`);
     outputs.set(path.join('plugins', plugin, 'agents', file), rendered);
   }
+  // Codex has no plugin agents: its run skill spawns a subagent that reads this role file.
+  // Every role ships in the core plugin, because Codex installs only that one.
+  if (file === 'orchestrator.md') continue;
+  const shell = /^tools:.*\bBash\b/m.test(frontmatter) || !/^tools:/m.test(frontmatter);
+  const codexNote = `You are running in Codex as a worker that the agentic-tests run skill spawned. Read, Write, Edit, Glob and Grep below mean the same work done with your shell and apply_patch.${shell ? '' : ' This role has no shell in Claude Code: use yours only to read files and edit your draft; never run the product, tests or the CLI.'}`;
+  outputs.set(path.join('plugins', 'agentic-tests', 'codex', 'roles', file), `${generated}\n${codexNote}\n${body}`);
 }
 
 let stale = [];
 const expected = new Set(outputs.keys());
-for (const plugin of readdirSync(path.join(root, 'plugins'))) {
-  const dir = path.join(root, 'plugins', plugin, 'agents');
+const generatedDirs = readdirSync(path.join(root, 'plugins')).map(plugin => path.join('plugins', plugin, 'agents'))
+  .concat(path.join('plugins', 'agentic-tests', 'codex', 'roles'));
+for (const relativeDir of generatedDirs) {
+  const dir = path.join(root, relativeDir);
   if (!existsSync(dir)) continue;
   for (const file of readdirSync(dir)) {
-    const relative = path.join('plugins', plugin, 'agents', file);
+    const relative = path.join(relativeDir, file);
     if (!expected.has(relative)) { stale.push(`orphan ${relative}`); if (!check) rmSync(path.join(root, relative)); }
   }
 }

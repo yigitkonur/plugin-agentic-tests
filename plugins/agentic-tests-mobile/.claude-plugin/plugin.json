@@ -1,6 +1,6 @@
 {
   "name": "agentic-tests-mobile",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Mobile testing agents for agentic-tests: author, environment operator and executor that drive iOS simulators and Android emulators with Maestro, plus the web executor.",
   "author": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
   "homepage": "https://github.com/yigitkonur/plugin-agentic-tests",

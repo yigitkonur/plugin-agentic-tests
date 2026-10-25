@@ -1,12 +1,16 @@
 # plugin-agentic-tests
 
-A Claude Code plugin marketplace (`agentic-tests`) for agentic end-to-end test campaigns. One core plugin holds the engine and orchestration; four domain plugins hold the agents for web, HTTP APIs, MCP servers and mobile apps.
+A Claude Code and Codex plugin marketplace (`agentic-tests`) for agentic end-to-end test campaigns. On Claude Code, one core plugin holds the engine and orchestration and four domain plugins hold the agents for web, HTTP APIs, MCP servers and mobile apps. Codex plugins cannot ship agents, so on Codex the core plugin alone covers every domain: its run skill spawns Codex subagents that read generated role files.
 
 ## Layout
 
 ```
 .claude-plugin/marketplace.json   catalog of the five plugins (hand-written; versions = VERSION)
+.agents/plugins/marketplace.json  Codex catalog: the core plugin only
 plugins/agentic-tests/            core plugin
+  .codex-plugin/plugin.json       Codex manifest (version = VERSION; skills: ./codex/skills/)
+  codex/skills/run, codex/skills/setup   Codex adapters: follow skills/run|setup/SKILL.md with Codex substitutions
+  codex/roles/                    GENERATED: every role except the orchestrator, body only, for Codex workers
   engine/run-agentic-tests/       the engine: CLI, schemas, role references, templates (portable skill format)
   skills/run, skills/setup        /agentic-tests:run and /agentic-tests:setup (manual-only)
   agents/                         GENERATED: planner, plan-auditor, verifier, diagnostician, ticket-writer,
@@ -35,7 +39,9 @@ fixtures/                         web app, API (OpenAPI), MCP server, SwiftUI ap
 - The engine is the source of truth for records. Do not weaken its invariants (distinct worker handles, blind review, accepted is not PASS) to make a run pass. Fix the prompt or the orchestration instead.
 - Helper scripts live once, in the core plugin's `scripts/`; handoffs give workers their path (`Helpers:`). Shell snippets that agents `source` must work in zsh and bash (no unmatched globs). Secrets travel by stdin or exported variables, never as literals on a command line.
 - The runner cards (`src/fragments/runner-*.md`) are curated from the vendored docs. When `vendor-runners.sh` changes a vendored file, re-read the matching card.
-- Bump `VERSION`, every `plugin.json` version and the marketplace versions together; `validate.mjs` fails on drift.
+- Bump `VERSION`, every `plugin.json` version (the Codex one included) and the marketplace versions together; `validate.mjs` fails on drift.
+- The Claude skills are the single source of the run and setup procedures. The Codex skills only map Claude terms to Codex (`spawn_agent`, `wait_agent`, `send_input`, `close_agent`); change a procedure in `skills/`, and the Codex table only when a Claude-specific term is added.
+- `scripts/codex-plugin-project.sh` turns the plugin on or off per project in Codex (Codex has no `plugin enable`); the README links its raw URL.
 
 ## Commands
 
@@ -44,6 +50,7 @@ node scripts/build.mjs && node scripts/validate.mjs        # after editing src/
 node --test tests/engine/*.test.mjs                        # engine suite, about 5 minutes
 claude plugin validate --strict .                          # marketplace manifest
 claude --plugin-dir plugins/agentic-tests --plugin-dir plugins/agentic-tests-web   # local session with plugins
+codex plugin marketplace add "$PWD" && codex plugin add agentic-tests@agentic-tests # Codex from this checkout
 ```
 
 ## Live checks

@@ -1,6 +1,6 @@
 # agentic-tests
 
-e2e testing for claude code that doesn't grade its own homework.
+e2e testing for claude code and codex that doesn't grade its own homework.
 
 you describe user journeys in plain words. a crew of model-pinned agents writes the test cases, boots (or attaches to) your app, plans and audits the run, drives the real thing (browser, http api, mcp server, ios / android app), and then *separate* reviewers judge the saved receipts: screenshots, snapshots, responses, junit. you get a verdict per case, an html report, and if you want it, a repair loop that diagnoses the bug, files an issue, fixes it in a worktree, merges and retests.
 
@@ -8,7 +8,7 @@ tl;dr: no vibes-based "looks good to me". every pass has evidence, and the agent
 
 ## install
 
-you need [claude code](https://claude.com/claude-code). the one-liner (straight from `claude plugin install --help`):
+you need [claude code](https://claude.com/claude-code) or [codex](https://github.com/openai/codex) 0.163+ (codex: [skip ahead](#codex)). the claude code one-liner (straight from `claude plugin install --help`):
 
 ```bash
 claude plugin install agentic-tests-web --marketplace yigitkonur/plugin-agentic-tests
@@ -61,9 +61,34 @@ agentic-off() {  # agentic-off web api  -> turn it back off for the current proj
 }
 ```
 
-updates: `claude plugin marketplace update agentic-tests`, then `claude plugin update <plugin>@agentic-tests` (finish or tear down a campaign first, see below).
+updates: `claude plugin marketplace update agentic-tests`, then `claude plugin update <plugin>@agentic-tests` (finish or tear down a campaign first, see below). heads up: claude code's background auto-update skips *disabled* plugins, so with option b you run these two yourself (a cron line works).
 
 inside a claude code session the same things are `/plugin marketplace add yigitkonur/plugin-agentic-tests` and `/plugin install agentic-tests-web@agentic-tests`.
+
+### codex
+
+the same repo is a codex marketplace too. codex plugins can't ship agents, so on codex it's **one** plugin, `agentic-tests`, with every domain and every role inside: the run skill spawns a fresh codex subagent per task and hands it that role's text.
+
+install once, globally off. codex has no `plugin enable/disable` command, so a tiny helper flips the config for you:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yigitkonur/plugin-agentic-tests/main/scripts/codex-plugin-project.sh -o ~/.local/bin/codex-plugin-project.sh && chmod +x ~/.local/bin/codex-plugin-project.sh
+codex plugin marketplace add yigitkonur/plugin-agentic-tests
+codex plugin add agentic-tests@agentic-tests
+codex-plugin-project.sh global-off agentic-tests@agentic-tests   # writes enabled = false into ~/.codex/config.toml
+```
+
+turn it on in one project (run it inside the project), then start a new codex session there:
+
+```bash
+codex-plugin-project.sh on agentic-tests@agentic-tests . --trust   # off again: codex-plugin-project.sh off agentic-tests@agentic-tests
+```
+
+that writes `enabled = true` into the project's `.codex/config.toml`. codex ignores that file unless the project is trusted, and `--trust` adds the trust line to `~/.codex/config.toml`. trusting a project also switches on its own hooks and rules, so only do it for repos you own. check with `codex plugin list`: `installed, enabled` inside the project, `installed, disabled` everywhere else.
+
+use it: `$agentic-tests:setup`, then `$agentic-tests:run http://127.0.0.1:3000 "sign in; see three orders"`. same settings file, same engine, same report. what's different from claude code: workers run on your session's model (no per-role pins), there's no `--detach` / `run-forked`, and workers inherit your sandbox, so run campaigns with approvals off and network on.
+
+updates: `codex plugin marketplace upgrade agentic-tests` moves the installed plugin to the new version; start a new session to load it.
 
 ## which plugins
 
@@ -75,7 +100,7 @@ inside a claude code session the same things are `/plugin marketplace add yigitk
 | `agentic-tests-mcp` | author, environment operator and executor that drive mcpc 0.7 sessions | an mcp server |
 | `agentic-tests-mobile` | author, environment operator and executor using maestro (cli + mcp) on ios simulators and android emulators, plus the web executor | a mobile app |
 
-they stack: web app with an api → `web` + `api`. mcp server with a backend behind it → `mcp` + `api`.
+they stack: web app with an api → `web` + `api`. mcp server with a backend behind it → `mcp` + `api`. (codex: the one `agentic-tests` plugin covers all of it.)
 
 ## what you need on the machine
 
@@ -167,7 +192,7 @@ live-checked on macos (apple silicon) with real campaigns: web (ego-browser on a
 
 ## hacking on it
 
-see `AGENTS.md`. agents are generated from `src/`; after edits run `node scripts/build.mjs && node scripts/validate.mjs`. engine tests: `node --test tests/engine/*.test.mjs`. live checks: `scripts/live-project.sh <web|api|mcp|mobile|android|defect> <dir>` spins up a throwaway project from a fixture.
+see `AGENTS.md`. agents (and the codex role copies in `plugins/agentic-tests/codex/roles/`) are generated from `src/`; after edits run `node scripts/build.mjs && node scripts/validate.mjs`. engine tests: `node --test tests/engine/*.test.mjs`. live checks: `scripts/live-project.sh <web|api|mcp|mobile|android|defect> <dir>` spins up a throwaway project from a fixture.
 
 ## license
 
