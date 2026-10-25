@@ -8,32 +8,62 @@ tl;dr: no vibes-based "looks good to me". every pass has evidence, and the agent
 
 ## install
 
-you need [claude code](https://claude.com/claude-code). from a terminal in your project, the one-liner:
+you need [claude code](https://claude.com/claude-code). the one-liner (straight from `claude plugin install --help`):
+
+```bash
+claude plugin install agentic-tests-web --marketplace yigitkonur/plugin-agentic-tests
+```
+
+that adds the marketplace, installs the web plugin, and pulls the core plugin (`agentic-tests`) in as a dependency. swap `-web` for `-api`, `-mcp` or `-mobile`. restart claude code after installing so the agents load.
+
+### option a: install and turn on in one project
 
 ```bash
 claude plugin install agentic-tests-web --marketplace yigitkonur/plugin-agentic-tests --scope project
 ```
 
-that adds the marketplace and installs the web plugin, and the core plugin (`agentic-tests`) comes along as a dependency. swap `-web` for whatever your project needs, or stack them:
+`--scope project` writes it into that project's `.claude/settings.json` (commit it so the team gets it). need more domains? add `claude plugin install agentic-tests-api@agentic-tests --scope project` etc.
+
+### option b: install once everywhere, switch on per project (no token cost until you do)
+
+every enabled plugin puts its agent names into the context of every session (core ~780 tokens, each domain ~225), so the tidy setup is: install all five once at user scope, leave them **disabled**, and enable them only in the projects you want to test.
 
 ```bash
-claude plugin marketplace add yigitkonur/plugin-agentic-tests --scope project
-claude plugin install agentic-tests-web@agentic-tests --scope project
-claude plugin install agentic-tests-api@agentic-tests --scope project
-claude plugin install agentic-tests-mcp@agentic-tests --scope project
-claude plugin install agentic-tests-mobile@agentic-tests --scope project
+claude plugin marketplace add yigitkonur/plugin-agentic-tests
+for p in agentic-tests agentic-tests-web agentic-tests-api agentic-tests-mcp agentic-tests-mobile; do
+  claude plugin install $p@agentic-tests && claude plugin disable $p@agentic-tests --scope user
+done
 ```
 
-already inside a claude code session? same thing with slash commands:
+(run that in bash or zsh on each machine you use, ssh boxes included.) then, in any project, whenever you want it:
 
-```text
-/plugin marketplace add yigitkonur/plugin-agentic-tests
-/plugin install agentic-tests-web@agentic-tests --scope project
+```bash
+claude plugin enable agentic-tests@agentic-tests --scope project       # the core, always
+claude plugin enable agentic-tests-web@agentic-tests --scope project   # + the domains you need
+claude plugin enable agentic-tests-api@agentic-tests --scope project
+# off again:
+claude plugin disable agentic-tests-web@agentic-tests --scope project
+claude plugin disable agentic-tests@agentic-tests --scope project
 ```
 
-restart the session after installing so the agents load. later updates: `claude plugin marketplace update agentic-tests`.
+it only flips `enabledPlugins` in that project's `.claude/settings.json`; start a new claude session there to pick it up. we tested this on a fresh project: before enabling, no `agentic-tests` commands; after, `/agentic-tests:run`, `:run-forked`, `:setup` plus 11 agents; after disabling, nothing.
 
-install per project (`--scope project`), not globally. every enabled plugin puts its agent names in the context of every session (the core is ~780 tokens, each domain ~225), so only turn on what a project actually uses.
+lazy mode, drop these in your `~/.zshrc` or `~/.bashrc`:
+
+```bash
+agentic-on() {   # agentic-on web api   -> turn it on for the current project (core + the domains you name)
+  claude plugin enable agentic-tests@agentic-tests --scope project || return
+  local d; for d in "$@"; do claude plugin enable "agentic-tests-$d@agentic-tests" --scope project; done
+}
+agentic-off() {  # agentic-off web api  -> turn it back off for the current project
+  local d; for d in "$@"; do claude plugin disable "agentic-tests-$d@agentic-tests" --scope project; done
+  claude plugin disable agentic-tests@agentic-tests --scope project
+}
+```
+
+updates: `claude plugin marketplace update agentic-tests`, then `claude plugin update <plugin>@agentic-tests` (finish or tear down a campaign first, see below).
+
+inside a claude code session the same things are `/plugin marketplace add yigitkonur/plugin-agentic-tests` and `/plugin install agentic-tests-web@agentic-tests`.
 
 ## which plugins
 
@@ -49,7 +79,7 @@ they stack: web app with an api → `web` + `api`. mcp server with a backend beh
 
 ## what you need on the machine
 
-- node 22+ with npm. the first `doctor` run installs the engine's two pinned deps (`yaml`, `ajv`) into `~/.cache/run-agentic-tests`, once.
+- node 22+ with npm, on the machine where claude code runs (a box with claude code but no `node` on its PATH can install the plugin but not run campaigns). the first `doctor` run installs the engine's two pinned deps (`yaml`, `ajv`) into `~/.cache/run-agentic-tests`, once.
 - `timeout` (on a stock mac: `brew install coreutils`).
 - the runner for each domain you test:
   - web: the [`ego-browser`](https://github.com/citrolabs/ego-lite) cli. it can run the browser on this machine (browser host `local`), or be an ssh wrapper to another machine (browser host = that ssh alias).
