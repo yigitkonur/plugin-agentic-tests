@@ -6,89 +6,101 @@ you describe user journeys in plain words. a crew of model-pinned agents writes 
 
 tl;dr: no vibes-based "looks good to me". every pass has evidence, and the agent that ran the test never gets to say it passed.
 
+<!-- kit:install:start -->
 ## install
 
-you need [claude code](https://claude.com/claude-code) or [codex](https://github.com/openai/codex) 0.163+ (codex: [skip ahead](#codex)). the claude code one-liner (straight from `claude plugin install --help`):
+Every plugin of ours is installed **once, globally, and off**, then **turned on per project**. Nothing runs and no tokens are spent in chats that don't switch it on. It works the same in Claude Code and Codex.
 
-```bash
-claude plugin install agentic-tests-web --marketplace yigitkonur/plugin-agentic-tests
-```
+Codex gets `agentic-tests`; the other plugins here are Claude Code only.
 
-that adds the marketplace, installs the web plugin, and pulls the core plugin (`agentic-tests`) in as a dependency. swap `-web` for `-api`, `-mcp` or `-mobile`. restart claude code after installing so the agents load.
+### 1. install them globally
 
-### option a: install and turn on in one project
+**Claude Code**
 
-```bash
-claude plugin install agentic-tests-web --marketplace yigitkonur/plugin-agentic-tests --scope project
-```
-
-`--scope project` writes it into that project's `.claude/settings.json` (commit it so the team gets it). need more domains? add `claude plugin install agentic-tests-api@agentic-tests --scope project` etc.
-
-### option b: install once everywhere, switch on per project (no token cost until you do)
-
-every enabled plugin puts its agent names into the context of every session (core ~780 tokens, each domain ~225), so the tidy setup is: install all five once at user scope, leave them **disabled**, and enable them only in the projects you want to test.
-
-```bash
+```sh
 claude plugin marketplace add yigitkonur/plugin-agentic-tests
-for p in agentic-tests agentic-tests-web agentic-tests-api agentic-tests-mcp agentic-tests-mobile; do
-  claude plugin install $p@agentic-tests && claude plugin disable $p@agentic-tests --scope user
-done
+claude plugin install agentic-tests@agentic-tests -s user          # stays off: defaultEnabled is false in the manifest
+claude plugin install agentic-tests-web@agentic-tests -s user
+claude plugin install agentic-tests-api@agentic-tests -s user
+claude plugin install agentic-tests-mcp@agentic-tests -s user
+claude plugin install agentic-tests-mobile@agentic-tests -s user
 ```
 
-(run that in bash or zsh on each machine you use, ssh boxes included.) then, in any project, whenever you want it:
+**Codex** (0.163+)
 
-```bash
-claude plugin enable agentic-tests@agentic-tests --scope project       # the core, always
-claude plugin enable agentic-tests-web@agentic-tests --scope project   # + the domains you need
-claude plugin enable agentic-tests-api@agentic-tests --scope project
-# off again:
-claude plugin disable agentic-tests-web@agentic-tests --scope project
-claude plugin disable agentic-tests@agentic-tests --scope project
+```sh
+codex plugin marketplace add yigitkonur/plugin-agentic-tests
+codex plugin add agentic-tests@agentic-tests
+codex-plugin-project.sh global-off agentic-tests@agentic-tests     # Codex has no enable/disable command; this keeps it off everywhere
 ```
 
-it only flips `enabledPlugins` in that project's `.claude/settings.json`; start a new claude session there to pick it up. we tested this on a fresh project: before enabling, no `agentic-tests` commands; after, `/agentic-tests:run`, `:run-forked`, `:setup` plus 11 agents; after disabling, nothing.
+All our plugins, both hosts, plus the `plugin` command and the 6-hourly update job, in one line:
 
-lazy mode, drop these in your `~/.zshrc` or `~/.bashrc`:
-
-```bash
-agentic-on() {   # agentic-on web api   -> turn it on for the current project (core + the domains you name)
-  claude plugin enable agentic-tests@agentic-tests --scope project || return
-  local d; for d in "$@"; do claude plugin enable "agentic-tests-$d@agentic-tests" --scope project; done
-}
-agentic-off() {  # agentic-off web api  -> turn it back off for the current project
-  local d; for d in "$@"; do claude plugin disable "agentic-tests-$d@agentic-tests" --scope project; done
-  claude plugin disable agentic-tests@agentic-tests --scope project
-}
+```sh
+curl -fsSL https://raw.githubusercontent.com/yigitkonur/plugin-kit/main/install.sh | sh -s -- --all
 ```
 
-updates: `claude plugin marketplace update agentic-tests`, then `claude plugin update <plugin>@agentic-tests` (finish or tear down a campaign first, see below). heads up: don't count on claude code's background auto-update for *disabled* plugins (we've seen it update them on one machine and leave them alone on another), so with option b check `claude plugin list` after a release and run these two when it's behind (a cron line works).
+### 2. turn them on in a project
 
-inside a claude code session the same things are `/plugin marketplace add yigitkonur/plugin-agentic-tests` and `/plugin install agentic-tests-web@agentic-tests`.
+```sh
+cd your-project
+plugin on agentic-tests    # Claude Code and Codex, this folder only
+plugin off agentic-tests   # undo
+plugin                     # or pick from a list (TUI)
+```
+
+By hand, without the `plugin` command:
+
+```sh
+claude plugin enable agentic-tests@agentic-tests --scope project      # undo: claude plugin disable agentic-tests@agentic-tests --scope project
+claude plugin enable agentic-tests-web@agentic-tests --scope project      # undo: claude plugin disable agentic-tests-web@agentic-tests --scope project
+claude plugin enable agentic-tests-api@agentic-tests --scope project      # undo: claude plugin disable agentic-tests-api@agentic-tests --scope project
+claude plugin enable agentic-tests-mcp@agentic-tests --scope project      # undo: claude plugin disable agentic-tests-mcp@agentic-tests --scope project
+claude plugin enable agentic-tests-mobile@agentic-tests --scope project      # undo: claude plugin disable agentic-tests-mobile@agentic-tests --scope project
+codex-plugin-project.sh on agentic-tests@agentic-tests . --trust      # undo: codex-plugin-project.sh off agentic-tests@agentic-tests
+```
+
+Restart `claude` / `codex` in that folder afterwards.
+Codex reads a folder's `.codex/config.toml` only when the folder is trusted; `--trust` adds that, and it also enables the folder's hooks and rules, so use it for your own projects only. `plugin` and `codex-plugin-project.sh` come from [plugin-kit](https://github.com/yigitkonur/plugin-kit) (the one-line installer above).
+
+### 3. updates
+
+A plugin updates only when its `version` changes, and this repo's `release` workflow bumps it on every shipped change. Machines pick it up with `plugin update`, or by themselves with the 6-hourly job (`plugin autoupdate install`). By hand:
+
+```sh
+claude plugin marketplace update agentic-tests && claude plugin update agentic-tests@agentic-tests
+codex plugin marketplace upgrade agentic-tests        # then start a new session
+```
+
+No GitHub SSH key on the machine? `export CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1` (`plugin install` sets it in Claude's settings for you).
+
+### 4. uninstall
+
+```sh
+claude plugin uninstall agentic-tests@agentic-tests -s user
+claude plugin uninstall agentic-tests-web@agentic-tests -s user
+claude plugin uninstall agentic-tests-api@agentic-tests -s user
+claude plugin uninstall agentic-tests-mcp@agentic-tests -s user
+claude plugin uninstall agentic-tests-mobile@agentic-tests -s user
+claude plugin marketplace remove agentic-tests
+codex plugin remove agentic-tests@agentic-tests
+codex plugin marketplace remove agentic-tests
+```
+<!-- kit:install:end -->
+
+### hosts
+
+[claude code](https://claude.com/claude-code) or [codex](https://github.com/openai/codex) 0.163+. restart the host in the project after switching a plugin on so the agents load.
+
+### core plus domains
+
+every domain plugin pulls the core plugin (`agentic-tests`) in as a dependency, so switch on the core and whichever domains the project needs (`plugin on agentic-tests agentic-tests-web agentic-tests-api`). every enabled plugin puts its agent names into the context of every session (core ~780 tokens, each domain ~225), which is why they stay off until a project asks for them. we tested it on a fresh project: before switching on, no `agentic-tests` commands; after, `/agentic-tests:run`, `:run-forked`, `:setup` plus 11 agents; after switching off, nothing.
 
 ### codex
 
-the same repo is a codex marketplace too. codex plugins can't ship agents, so on codex it's **one** plugin, `agentic-tests`, with every domain and every role inside: the run skill spawns a fresh codex subagent per task and hands it that role's text.
+the same repo is a codex marketplace too. codex plugins can't ship agents, so on codex it's **one** plugin, `agentic-tests`, with every domain and every role inside: the run skill spawns a fresh codex subagent per task and hands it that role's text. the domain plugins are claude code only.
 
-install once, globally off. codex has no `plugin enable/disable` command, so a tiny helper flips the config for you:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yigitkonur/plugin-agentic-tests/main/scripts/codex-plugin-project.sh -o ~/.local/bin/codex-plugin-project.sh && chmod +x ~/.local/bin/codex-plugin-project.sh
-codex plugin marketplace add yigitkonur/plugin-agentic-tests
-codex plugin add agentic-tests@agentic-tests
-codex-plugin-project.sh global-off agentic-tests@agentic-tests   # writes enabled = false into ~/.codex/config.toml
-```
-
-turn it on in one project (run it inside the project), then start a new codex session there:
-
-```bash
-codex-plugin-project.sh on agentic-tests@agentic-tests . --trust   # off again: codex-plugin-project.sh off agentic-tests@agentic-tests
-```
-
-that writes `enabled = true` into the project's `.codex/config.toml`. codex ignores that file unless the project is trusted, and `--trust` adds the trust line to `~/.codex/config.toml`. trusting a project also switches on its own hooks and rules, so only do it for repos you own. check with `codex plugin list`: `installed, enabled` inside the project, `installed, disabled` everywhere else.
-
-use it: `$agentic-tests:setup`, then `$agentic-tests:run http://127.0.0.1:3000 "sign in; see three orders"`. same settings file, same engine, same report. what's different from claude code: workers run on your session's model (no per-role pins), there's no `--detach` / `run-forked`, and workers inherit your sandbox, so run campaigns with approvals off and network on.
-
-updates: `codex plugin marketplace upgrade agentic-tests` moves the installed plugin to the new version; start a new session to load it.
+use it: `$agentic-tests:setup`, then `$agentic-tests:run http://127.0.0.1:3000 "sign in; see three orders"`. same settings file, same engine, same report. what's different from claude code: workers run on your session's model (no per-role pins), there's no `--detach` / `run-forked`, and workers inherit your sandbox, so run campaigns with approvals off and network on. codex ignores a project's `.codex/config.toml` unless the project is trusted; `plugin on` asks once.
 
 ## which plugins
 
@@ -173,8 +185,8 @@ your main session only runs the controller loop. every agent sets `omitClaudeMd:
 
 - **don't edit the project mid-run.** the engine fingerprints tracked and untracked files and re-checks them at every step; an edit invalidates the proof. files your app writes on its own (a json or sqlite store, logs) get added to `.git/info/exclude` by the operator, so they don't count.
 - **teardown + resume.** a finished run ends with `teardown`: it stops the campaign's dev servers, mcpc sessions and devices, removes its worktrees and the simulators / emulators it created, and keeps the report server up. after teardown `state` says `complete: false` (proof is judged against a live target) and shows the real result under `torn_down`. got interrupted? `/agentic-tests:run --resume` replaces the lost workers and re-checks the runtimes.
-- **finish or tear down before `/plugin update`.** a runtime is tied to the installed version that started it; a different version gets `PROCESS_OWNERSHIP_MISMATCH` when it tries to stop or resume it.
-- **install in each project.** copying another project's `.claude/settings.json` only *declares* the plugins; run the install command there.
+- **finish or tear down before updating.** a runtime is tied to the installed version that started it; a different version gets `PROCESS_OWNERSHIP_MISMATCH` when it tries to stop or resume it.
+- **switch it on in each project.** copying another project's `.claude/settings.json` only *declares* the plugins; run `plugin on agentic-tests` (and the domains) there.
 - **remote browser host? ports are fixed.** with an ssh-wrapper ego-browser, the browser reaches your machine only on the ports the wrapper forwards (the reference wrapper: `3000 3001 4173 4321 5000 5173 8000 8080 8081 8088 8090 8787 8788 8888 9000`). the run picks one set at the start (web port + every local backend) and never changes it. with `local`, none of this applies.
 - **secrets stay out of files.** browser scripts get credentials as `ENV.NAME` through stdin (`ego-run.sh --env NAME`), never on a command line or on disk. mcpc stores a stdio server's resolved env in its session state while the run is live; `teardown` (or `at.mjs scrub`) blanks it. delete a campaign folder only *after* teardown, or you orphan its mcpc bridge.
 - **permissions.** the agents run in the background and can't answer permission prompts. use a trusted project with `bypassPermissions`, or allow the tools `/agentic-tests:setup` lists.
