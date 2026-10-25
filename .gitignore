@@ -4,3 +4,25 @@ node_modules/
 /agentic-tests/
 /fixtures/*/agentic-tests/
 .claude/*.local.md
+
+# Added by run-repo-cleanup sweep-artifacts.py
+to-delete/
+docs/
+
+# Secrets (never tracked)
+.env
+.env.*
+*.pem
+id_rsa
+id_rsa.pub
+*.key
+credentials.json
+service-account.json
+
+# AI agent session artifacts
+*.claude-session*
+.cursor-session*
+.aider*
+.continues-handoff.md
+.design-soul/
+derailment-notes/
