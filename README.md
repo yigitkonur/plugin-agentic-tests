@@ -61,7 +61,7 @@ agentic-off() {  # agentic-off web api  -> turn it back off for the current proj
 }
 ```
 
-updates: `claude plugin marketplace update agentic-tests`, then `claude plugin update <plugin>@agentic-tests` (finish or tear down a campaign first, see below). heads up: claude code's background auto-update skips *disabled* plugins, so with option b you run these two yourself (a cron line works).
+updates: `claude plugin marketplace update agentic-tests`, then `claude plugin update <plugin>@agentic-tests` (finish or tear down a campaign first, see below). heads up: don't count on claude code's background auto-update for *disabled* plugins (we've seen it update them on one machine and leave them alone on another), so with option b check `claude plugin list` after a release and run these two when it's behind (a cron line works).
 
 inside a claude code session the same things are `/plugin marketplace add yigitkonur/plugin-agentic-tests` and `/plugin install agentic-tests-web@agentic-tests`.
 
