@@ -79,7 +79,7 @@ they stack: web app with an api → `web` + `api`. mcp server with a backend beh
 
 ## what you need on the machine
 
-- node 22+ with npm, on the machine where claude code runs (a box with claude code but no `node` on its PATH can install the plugin but not run campaigns). the first `doctor` run installs the engine's two pinned deps (`yaml`, `ajv`) into `~/.cache/run-agentic-tests`, once.
+- node 22+ with npm, on the machine where claude code runs. the first `doctor` run installs the engine's two pinned deps (`yaml`, `ajv`) into `~/.cache/run-agentic-tests`, once.
 - `timeout` (on a stock mac: `brew install coreutils`).
 - the runner for each domain you test:
   - web: the [`ego-browser`](https://github.com/citrolabs/ego-lite) cli. it can run the browser on this machine (browser host `local`), or be an ssh wrapper to another machine (browser host = that ssh alias).
