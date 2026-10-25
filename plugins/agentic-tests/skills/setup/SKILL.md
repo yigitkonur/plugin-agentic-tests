@@ -68,4 +68,4 @@ Then make sure the project's `.gitignore` contains `.claude/*.local.md` and `/ag
 
 ## 4. Report
 
-One short message: the settings path, the detected domains with the evidence for each, the runner status per domain, the plugins to install (`/plugin install agentic-tests-<domain>@agentic-tests`, enabled for this project only with `--scope project`), anything missing (runner, GitHub remote, accounts), and the next command, for example `/agentic-tests:run http://127.0.0.1:3000 "sign in; see orders"`.
+One short message: the settings path, the detected domains with the evidence for each, the runner status per domain, the plugins to turn on for this project (`plugin on agentic-tests agentic-tests-<domain>`), anything missing (runner, GitHub remote, accounts), and the next command, for example `/agentic-tests:run http://127.0.0.1:3000 "sign in; see orders"`.

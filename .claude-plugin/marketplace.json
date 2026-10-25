@@ -2,8 +2,7 @@
   "name": "agentic-tests",
   "owner": { "name": "Yigit Konur", "url": "https://github.com/yigitkonur" },
   "metadata": {
-    "description": "Agentic E2E testing for Claude Code: one core plugin with the engine and orchestration, plus domain plugins for web, HTTP APIs, MCP servers and mobile. Install the core and the domains a project needs.",
-    "version": "0.3.0"
+    "description": "Agentic E2E testing for Claude Code: one core plugin with the engine and orchestration, plus domain plugins for web, HTTP APIs, MCP servers and mobile. Install the core and the domains a project needs."
   },
   "plugins": [
     { "name": "agentic-tests", "source": "./plugins/agentic-tests", "description": "Core: engine, /agentic-tests:run and /agentic-tests:setup, planner, auditor, verifier and repair agents.", "version": "0.3.0", "category": "testing" },

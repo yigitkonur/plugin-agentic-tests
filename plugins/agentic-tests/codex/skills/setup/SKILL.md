@@ -17,7 +17,7 @@ The setup procedure is written once, for Claude Code, in the plugin's `skills/se
 | AskUserQuestion | ask in chat in a few short numbered lines and wait for the answer; with `--yes` or in a headless run, ask nothing |
 | step 7, effort overrides | skip: in Codex every worker runs on this session's model |
 | step 8, permissions | Codex workers inherit this session's sandbox and approvals and cannot answer approval prompts: say that campaigns need approvals off and a sandbox that allows network access and writes inside the project |
-| the plugins to install in the report | in Codex the one `agentic-tests` plugin covers every domain; per project it is turned on with `codex-plugin-project.sh on agentic-tests@agentic-tests . --trust` |
+| the plugins to install in the report | in Codex the one `agentic-tests` plugin covers every domain; per project it is turned on with `plugin on agentic-tests` |
 | the next command `/agentic-tests:run …` | `$agentic-tests:run …` with the same arguments |
 
 The settings file is the same one Claude Code reads: `<project>/.claude/agentic-tests.local.md`.

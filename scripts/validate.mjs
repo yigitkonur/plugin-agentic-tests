@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Structural checks for the marketplace, run in CI next to `node scripts/build.mjs --check`.
-// - every plugin has a manifest whose name matches its folder and whose version equals VERSION
-// - the marketplace lists exactly the plugins on disk, with the same version
+// - every plugin has a manifest whose name matches its folder and whose marketplace entry has the same version
+//   (each plugin is versioned on its own by scripts/kit/release.py; there is no repo-wide version)
+// - the marketplace lists exactly the plugins on disk
 // - the Codex marketplace and .codex-plugin manifests match too, and their skills are manual-only
 // - agents have name, description (at most 60 words), model and no unresolved template markers
 // - skills are manual-only (disable-model-invocation: true)
@@ -11,29 +12,27 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const version = readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
 const errors = [];
 const frontmatter = text => Object.fromEntries((text.match(/^---\n([\s\S]*?)\n---/)?.[1] || '').split('\n').map(line => line.match(/^([\w-]+):\s*(.*)$/)).filter(Boolean).map(m => [m[1], m[2]]));
 
 const plugins = readdirSync(path.join(root, 'plugins')).filter(name => existsSync(path.join(root, 'plugins', name, '.claude-plugin', 'plugin.json')));
 const marketplace = JSON.parse(readFileSync(path.join(root, '.claude-plugin', 'marketplace.json'), 'utf8'));
 const listed = new Map(marketplace.plugins.map(p => [p.name, p]));
-if (marketplace.metadata?.version !== version) errors.push(`marketplace metadata.version ${marketplace.metadata?.version} != VERSION ${version}`);
 for (const name of plugins) {
   const manifest = JSON.parse(readFileSync(path.join(root, 'plugins', name, '.claude-plugin', 'plugin.json'), 'utf8'));
   if (manifest.name !== name) errors.push(`plugins/${name}: manifest name ${manifest.name}`);
-  if (manifest.version !== version) errors.push(`plugins/${name}: version ${manifest.version} != VERSION ${version}`);
+  if (manifest.defaultEnabled !== false) errors.push(`plugins/${name}: plugin.json must set "defaultEnabled": false`);
   const entry = listed.get(name);
   if (!entry) errors.push(`marketplace does not list ${name}`);
   else {
-    if (entry.version !== version) errors.push(`marketplace ${name} version ${entry.version} != VERSION ${version}`);
+    if (entry.version !== manifest.version) errors.push(`marketplace ${name} version ${entry.version} != plugin.json ${manifest.version}`);
     if (entry.source !== `./plugins/${name}`) errors.push(`marketplace ${name} source ${entry.source}`);
   }
 }
 for (const name of listed.keys()) if (!plugins.includes(name)) errors.push(`marketplace lists ${name}, which has no plugin folder`);
 
 // Codex: its marketplace lists the plugins that carry a .codex-plugin manifest (only the core today),
-// at the same version, with manual-only skills (agents/openai.yaml allow_implicit_invocation: false).
+// at the same version as its Claude manifest, with manual-only skills (agents/openai.yaml allow_implicit_invocation: false).
 const codexMarketplace = JSON.parse(readFileSync(path.join(root, '.agents', 'plugins', 'marketplace.json'), 'utf8'));
 if (codexMarketplace.name !== marketplace.name) errors.push(`codex marketplace name ${codexMarketplace.name} != ${marketplace.name}`);
 for (const entry of codexMarketplace.plugins) {
@@ -44,7 +43,8 @@ for (const entry of codexMarketplace.plugins) {
   if (!existsSync(manifestPath)) { errors.push(`${where}: no .codex-plugin/plugin.json`); continue; }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   if (manifest.name !== entry.name) errors.push(`plugins/${entry.name}/.codex-plugin: name ${manifest.name}`);
-  if (manifest.version !== version) errors.push(`plugins/${entry.name}/.codex-plugin: version ${manifest.version} != VERSION ${version}`);
+  const claudeManifest = JSON.parse(readFileSync(path.join(root, 'plugins', entry.name, '.claude-plugin', 'plugin.json'), 'utf8'));
+  if (manifest.version !== claudeManifest.version) errors.push(`plugins/${entry.name}/.codex-plugin: version ${manifest.version} != Claude manifest ${claudeManifest.version}`);
   const skills = path.join(root, 'plugins', entry.name, manifest.skills || '');
   if (!manifest.skills || !existsSync(skills)) { errors.push(`plugins/${entry.name}/.codex-plugin: skills ${manifest.skills} missing`); continue; }
   for (const skill of readdirSync(skills)) {
@@ -86,4 +86,4 @@ for (const name of plugins) {
   }
 }
 if (errors.length) { console.error(`validate: ${errors.length} problem(s)\n  ${errors.join('\n  ')}`); process.exit(1); }
-console.log(JSON.stringify({ ok: true, version, plugins: plugins.length }));
+console.log(JSON.stringify({ ok: true, plugins: plugins.length }));
